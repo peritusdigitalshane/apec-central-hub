@@ -15,6 +15,7 @@ import InvoiceEditor from "./pages/InvoiceEditor";
 import InvoiceTemplateEditor from "./pages/InvoiceTemplateEditor";
 import UserManagement from "./pages/UserManagement";
 import SuperAdminSettings from "./pages/SuperAdminSettings";
+import KnowledgeBaseManager from "./pages/KnowledgeBaseManager";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/invoices/:id" element={<ProtectedRoute><Layout><InvoiceEditor /></Layout></ProtectedRoute>} />
           <Route path="/invoices/template" element={<ProtectedRoute><Layout><InvoiceTemplateEditor /></Layout></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><Layout><UserManagement /></Layout></ProtectedRoute>} />
+          <Route path="/knowledge-base" element={<ProtectedRoute><Layout><KnowledgeBaseManager /></Layout></ProtectedRoute>} />
           <Route path="/super-admin" element={<ProtectedRoute><Layout><SuperAdminSettings /></Layout></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

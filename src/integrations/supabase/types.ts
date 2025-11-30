@@ -145,6 +145,50 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base_documents: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id: string
+          report_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id?: string
+          report_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          report_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_documents_report_type_id_fkey"
+            columns: ["report_type_id"]
+            isOneToOne: false
+            referencedRelation: "report_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           created_at: string | null
@@ -288,6 +332,33 @@ export type Database = {
         }
         Relationships: []
       }
+      report_types: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           approved_at: string | null
@@ -301,6 +372,7 @@ export type Database = {
           location: string | null
           order_number: string | null
           report_number: string | null
+          report_type_id: string | null
           status: string
           subject: string | null
           submitted_for_approval: boolean | null
@@ -322,6 +394,7 @@ export type Database = {
           location?: string | null
           order_number?: string | null
           report_number?: string | null
+          report_type_id?: string | null
           status?: string
           subject?: string | null
           submitted_for_approval?: boolean | null
@@ -343,6 +416,7 @@ export type Database = {
           location?: string | null
           order_number?: string | null
           report_number?: string | null
+          report_type_id?: string | null
           status?: string
           subject?: string | null
           submitted_for_approval?: boolean | null
@@ -353,6 +427,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reports_report_type_id_fkey"
+            columns: ["report_type_id"]
+            isOneToOne: false
+            referencedRelation: "report_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reports_template_id_fkey"
             columns: ["template_id"]

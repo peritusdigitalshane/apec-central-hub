@@ -79,6 +79,18 @@ export default function Layout({ children }: LayoutProps) {
                   Users
                 </Button>
               )}
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "text-muted-foreground hover:text-primary",
+                    isActive("/knowledge-base") && "text-primary"
+                  )}
+                  onClick={() => navigate("/knowledge-base")}
+                >
+                  AI Knowledge Base
+                </Button>
+              )}
               {isSuperAdmin && (
                 <Button
                   variant="ghost"
