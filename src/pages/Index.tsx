@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, ClipboardList, BarChart3, Settings, Plus, Search } from "lucide-react";
@@ -7,6 +8,7 @@ import logo from "@/assets/apec-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { role, isSuperAdmin, isAdmin } = useUserRole();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -71,15 +73,19 @@ const Index = () => {
               <Button variant="ghost" className="text-foreground hover:text-primary">
                 Dashboard
               </Button>
-              <Button variant="ghost" className="text-muted-foreground hover:text-primary">
-                Quotes
-              </Button>
               <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/reports")}>
                 Reports
               </Button>
-              <Button variant="ghost" className="text-muted-foreground hover:text-primary">
-                Projects
-              </Button>
+              {isAdmin && (
+                <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/users")}>
+                  Users
+                </Button>
+              )}
+              {isSuperAdmin && (
+                <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/super-admin")}>
+                  Settings
+                </Button>
+              )}
               <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={handleLogout}>
                 Logout
               </Button>

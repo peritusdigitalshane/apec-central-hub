@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Plus } from "lucide-react";
+import { ArrowLeft, Save, Send, CheckCircle } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { ReportBlock } from "@/components/blocks/ReportBlock";
@@ -25,6 +26,9 @@ interface Report {
   order_number: string | null;
   technician: string | null;
   report_number: string | null;
+  submitted_for_approval: boolean | null;
+  approved_by: string | null;
+  approved_at: string | null;
 }
 
 interface Block {
@@ -37,10 +41,12 @@ interface Block {
 export default function ReportEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { role, isAdmin } = useUserRole();
   const [report, setReport] = useState<Report | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -110,6 +116,50 @@ export default function ReportEditor() {
       toast.error("Failed to save report");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const submitForApproval = async () => {
+    if (!report) return;
+    setSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from("reports")
+        .update({ submitted_for_approval: true, status: "in_progress" })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Report submitted for approval");
+      navigate("/reports");
+    } catch (error: any) {
+      toast.error("Failed to submit report");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const approveReport = async () => {
+    if (!report || !isAdmin) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("reports")
+        .update({
+          status: "completed",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Report approved");
+      loadReport();
+    } catch (error: any) {
+      toast.error("Failed to approve report");
     }
   };
 
@@ -210,6 +260,8 @@ export default function ReportEditor() {
     }
   };
 
+  const canEdit = !report?.submitted_for_approval || isAdmin;
+  
   if (loading || !report) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -227,25 +279,45 @@ export default function ReportEditor() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold">Report Editor</h1>
+            {report.submitted_for_approval && (
+              <span className="text-sm text-muted-foreground">(Submitted for approval)</span>
+            )}
           </div>
-          <Button onClick={saveReport} disabled={saving} className="gap-2">
-            <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button onClick={saveReport} disabled={saving} variant="outline" className="gap-2">
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            )}
+            {!report.submitted_for_approval && role === "staff" && (
+              <Button onClick={submitForApproval} disabled={submitting} className="gap-2">
+                <Send className="h-4 w-4" />
+                {submitting ? "Submitting..." : "Submit for Approval"}
+              </Button>
+            )}
+            {isAdmin && report.submitted_for_approval && report.status !== "completed" && (
+              <Button onClick={approveReport} className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Approve Report
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="container max-w-4xl py-8">
         <div className="space-y-6 mb-8">
           <div>
-            <Label htmlFor="title">Report Title</Label>
-            <Input
-              id="title"
-              value={report.title}
-              onChange={(e) => setReport({ ...report, title: e.target.value })}
-              className="text-2xl font-bold"
-              placeholder="e.g., Fluorescent Magnetic Particle and Ultrasonic Inspection Report"
-            />
+              <Label htmlFor="title">Report Title</Label>
+              <Input
+                id="title"
+                value={report.title}
+                onChange={(e) => setReport({ ...report, title: e.target.value })}
+                className="text-2xl font-bold"
+                placeholder="e.g., Fluorescent Magnetic Particle and Ultrasonic Inspection Report"
+                disabled={!canEdit}
+              />
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -256,6 +328,7 @@ export default function ReportEditor() {
                 value={report.job_number || ""}
                 onChange={(e) => setReport({ ...report, job_number: e.target.value })}
                 placeholder="27W005597"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -265,6 +338,7 @@ export default function ReportEditor() {
                 value={report.report_number || ""}
                 onChange={(e) => setReport({ ...report, report_number: e.target.value })}
                 placeholder="A2505-001"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -274,6 +348,7 @@ export default function ReportEditor() {
                 value={report.order_number || ""}
                 onChange={(e) => setReport({ ...report, order_number: e.target.value })}
                 placeholder="TBC"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -286,6 +361,7 @@ export default function ReportEditor() {
                 value={report.client_name || ""}
                 onChange={(e) => setReport({ ...report, client_name: e.target.value })}
                 placeholder="Company Name"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -296,6 +372,7 @@ export default function ReportEditor() {
                 value={report.client_email || ""}
                 onChange={(e) => setReport({ ...report, client_email: e.target.value })}
                 placeholder="contact@company.com"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -308,6 +385,7 @@ export default function ReportEditor() {
                 value={report.location || ""}
                 onChange={(e) => setReport({ ...report, location: e.target.value })}
                 placeholder="Site location"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -317,6 +395,7 @@ export default function ReportEditor() {
                 value={report.subject || ""}
                 onChange={(e) => setReport({ ...report, subject: e.target.value })}
                 placeholder="Inspection subject"
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -326,6 +405,7 @@ export default function ReportEditor() {
                 value={report.technician || ""}
                 onChange={(e) => setReport({ ...report, technician: e.target.value })}
                 placeholder="Technician name"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -338,6 +418,7 @@ export default function ReportEditor() {
                 type="date"
                 value={report.inspection_date || ""}
                 onChange={(e) => setReport({ ...report, inspection_date: e.target.value })}
+                disabled={!canEdit}
               />
             </div>
             <div>
@@ -345,6 +426,7 @@ export default function ReportEditor() {
               <Select
                 value={report.status}
                 onValueChange={(value) => setReport({ ...report, status: value })}
+                disabled={!canEdit}
               >
                 <SelectTrigger id="status">
                   <SelectValue />
@@ -360,11 +442,11 @@ export default function ReportEditor() {
           </div>
         </div>
 
-        <div className="border-t pt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Report Content</h2>
-            <BlockTypeSelector onSelect={addBlock} />
-          </div>
+          <div className="border-t pt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Report Content</h2>
+              {canEdit && <BlockTypeSelector onSelect={addBlock} />}
+            </div>
 
           <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
@@ -375,6 +457,7 @@ export default function ReportEditor() {
                     block={block}
                     onUpdate={(content) => updateBlock(block.id, content)}
                     onDelete={() => deleteBlock(block.id)}
+                    canEdit={canEdit}
                   />
                 ))}
               </div>
