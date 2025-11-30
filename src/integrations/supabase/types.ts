@@ -106,6 +106,57 @@ export type Database = {
           },
         ]
       }
+      report_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          job_number: string | null
+          location: string | null
+          order_number: string | null
+          report_number: string | null
+          status: string
+          subject: string | null
+          technician: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          job_number?: string | null
+          location?: string | null
+          order_number?: string | null
+          report_number?: string | null
+          status?: string
+          subject?: string | null
+          technician?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          job_number?: string | null
+          location?: string | null
+          order_number?: string | null
+          report_number?: string | null
+          status?: string
+          subject?: string | null
+          technician?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           approved_at: string | null
@@ -123,6 +174,7 @@ export type Database = {
           subject: string | null
           submitted_for_approval: boolean | null
           technician: string | null
+          template_id: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -143,6 +195,7 @@ export type Database = {
           subject?: string | null
           submitted_for_approval?: boolean | null
           technician?: string | null
+          template_id?: string | null
           title?: string
           updated_at?: string | null
           user_id: string
@@ -163,11 +216,58 @@ export type Database = {
           subject?: string | null
           submitted_for_approval?: boolean | null
           technician?: string | null
+          template_id?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_blocks: {
+        Row: {
+          content: Json
+          created_at: string | null
+          id: string
+          order_index: number
+          template_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          order_index: number
+          template_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          order_index?: number
+          template_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_blocks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
