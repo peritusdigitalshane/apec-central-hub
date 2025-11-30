@@ -10,6 +10,9 @@ import Reports from "./pages/Reports";
 import ReportEditor from "./pages/ReportEditor";
 import ReportTemplates from "./pages/ReportTemplates";
 import TemplateEditor from "./pages/TemplateEditor";
+import Invoices from "./pages/Invoices";
+import InvoiceEditor from "./pages/InvoiceEditor";
+import InvoiceTemplateEditor from "./pages/InvoiceTemplateEditor";
 import UserManagement from "./pages/UserManagement";
 import SuperAdminSettings from "./pages/SuperAdminSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/reports/:id" element={<ProtectedRoute><ReportEditor /></ProtectedRoute>} />
           <Route path="/templates" element={<ProtectedRoute><ReportTemplates /></ProtectedRoute>} />
           <Route path="/templates/:id" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceEditor /></ProtectedRoute>} />
+          <Route path="/invoices/template" element={<ProtectedRoute><InvoiceTemplateEditor /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
           <Route path="/super-admin" element={<ProtectedRoute><SuperAdminSettings /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

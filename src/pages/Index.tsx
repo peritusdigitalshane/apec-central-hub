@@ -76,6 +76,9 @@ const Index = () => {
               <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/templates")}>
                 Templates
               </Button>
+              <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/invoices")}>
+                Invoices
+              </Button>
               <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/reports")}>
                 Reports
               </Button>

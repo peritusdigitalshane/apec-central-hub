@@ -14,6 +14,128 @@ export type Database = {
   }
   public: {
     Tables: {
+      invoice_blocks: {
+        Row: {
+          content: Json
+          created_at: string | null
+          id: string
+          invoice_id: string
+          order_index: number
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          invoice_id: string
+          order_index: number
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          invoice_id?: string
+          order_index?: number
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_blocks_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_template_blocks: {
+        Row: {
+          content: Json
+          created_at: string | null
+          id: string
+          order_index: number
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          order_index: number
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          order_index?: number
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          created_at: string | null
+          customer_company: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          date: string | null
+          gst: number | null
+          id: string
+          invoice_number: string | null
+          purchase_order: string | null
+          status: string
+          submitted_at: string | null
+          total: number | null
+          total_inc_gst: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          date?: string | null
+          gst?: number | null
+          id?: string
+          invoice_number?: string | null
+          purchase_order?: string | null
+          status?: string
+          submitted_at?: string | null
+          total?: number | null
+          total_inc_gst?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          date?: string | null
+          gst?: number | null
+          id?: string
+          invoice_number?: string | null
+          purchase_order?: string | null
+          status?: string
+          submitted_at?: string | null
+          total?: number | null
+          total_inc_gst?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           created_at: string | null
