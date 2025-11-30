@@ -2,3 +2,6 @@ project_id = "zbiuxfglgyapypislkhv"
 
 [functions.fetch-openai-models]
 verify_jwt = false
+
+[functions.generate-report]
+verify_jwt = true

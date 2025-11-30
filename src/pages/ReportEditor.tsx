@@ -7,12 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Send, CheckCircle, Download } from "lucide-react";
+import { ArrowLeft, Save, Send, CheckCircle, Download, Sparkles, Loader2 } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { ReportBlock } from "@/components/blocks/ReportBlock";
 import { BlockTypeSelector } from "@/components/blocks/BlockTypeSelector";
 import html2pdf from "html2pdf.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Report {
   id: string;
@@ -27,6 +34,7 @@ interface Report {
   order_number: string | null;
   technician: string | null;
   report_number: string | null;
+  report_type_id: string | null;
   submitted_for_approval: boolean | null;
   approved_by: string | null;
   approved_at: string | null;
@@ -39,22 +47,46 @@ interface Block {
   order_index: number;
 }
 
+interface ReportType {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 export default function ReportEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { role, isAdmin } = useUserRole();
   const [report, setReport] = useState<Report | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [reportTypes, setReportTypes] = useState<ReportType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
       loadReport();
       loadBlocks();
+      loadReportTypes();
     }
   }, [id]);
+
+  const loadReportTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("report_types")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setReportTypes(data || []);
+    } catch (error: any) {
+      console.error("Failed to load report types:", error);
+    }
+  };
 
   const loadReport = async () => {
     try {
@@ -98,7 +130,6 @@ export default function ReportEditor() {
         .from("reports")
         .update({
           title: report.title,
-          status: report.status,
           client_name: report.client_name,
           client_email: report.client_email,
           inspection_date: report.inspection_date,
@@ -108,15 +139,83 @@ export default function ReportEditor() {
           order_number: report.order_number,
           technician: report.technician,
           report_number: report.report_number,
+          report_type_id: report.report_type_id,
         })
         .eq("id", id);
 
       if (error) throw error;
-      toast.success("Report saved");
+
+      // Save blocks
+      for (const block of blocks) {
+        const { error: blockError } = await supabase
+          .from("report_blocks")
+          .upsert({
+            id: block.id,
+            report_id: id!,
+            type: block.type,
+            content: block.content,
+            order_index: block.order_index,
+          });
+
+        if (blockError) throw blockError;
+      }
+
+      toast.success("Report saved successfully");
     } catch (error: any) {
       toast.error("Failed to save report");
+      console.error(error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const generateWithAI = async () => {
+    if (!report?.report_type_id) {
+      toast.error("Please select a report type first");
+      return;
+    }
+
+    setGenerating(true);
+    setAiDialogOpen(false);
+
+    try {
+      const userInputs = {
+        title: report.title || "",
+        client_name: report.client_name || "",
+        location: report.location || "",
+        job_number: report.job_number || "",
+        technician: report.technician || "",
+        subject: report.subject || "",
+      };
+
+      const { data, error } = await supabase.functions.invoke("generate-report", {
+        body: {
+          reportTypeId: report.report_type_id,
+          userInputs,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.content) {
+        // Add generated content as a text block
+        const newBlock: Block = {
+          id: crypto.randomUUID(),
+          type: "text",
+          content: { text: data.content },
+          order_index: blocks.length,
+        };
+
+        setBlocks([...blocks, newBlock]);
+        toast.success("Report content generated successfully!");
+      } else {
+        toast.error("No content was generated");
+      }
+    } catch (error: any) {
+      console.error("AI generation error:", error);
+      toast.error(error.message || "Failed to generate report with AI");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -312,12 +411,51 @@ export default function ReportEditor() {
               Export PDF
             </Button>
             {canEdit && (
-              <Button onClick={saveReport} disabled={saving} variant="outline" className="gap-2">
-                <Save className="h-4 w-4" />
-                {saving ? "Saving..." : "Save"}
-              </Button>
+              <>
+                <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="gap-2" 
+                      disabled={!report.report_type_id || generating}
+                    >
+                      {generating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Generate with AI
+                        </>
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Generate Report with AI</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        The AI will generate comprehensive report content based on the knowledge base for the selected report type and your provided information.
+                      </p>
+                      <p className="text-sm font-semibold">
+                        Make sure you've filled in the report details (title, client, location, etc.) for best results.
+                      </p>
+                      <Button onClick={generateWithAI} className="w-full">
+                        Generate Report Content
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button onClick={saveReport} disabled={saving} variant="outline" className="gap-2">
+                  <Save className="h-4 w-4" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              </>
             )}
-            {!report.submitted_for_approval && role === "staff" && (
+            {!report.submitted_for_approval && role === "staff" && canEdit && (
               <Button onClick={submitForApproval} disabled={submitting} className="gap-2">
                 <Send className="h-4 w-4" />
                 {submitting ? "Submitting..." : "Submit for Approval"}
@@ -332,7 +470,8 @@ export default function ReportEditor() {
           </div>
         </div>
         <div id="report-content" className="space-y-6 mb-8">
-          <div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
               <Label htmlFor="title">Report Title</Label>
               <Input
                 id="title"
@@ -342,6 +481,31 @@ export default function ReportEditor() {
                 placeholder="e.g., Fluorescent Magnetic Particle and Ultrasonic Inspection Report"
                 disabled={!canEdit}
               />
+            </div>
+            <div>
+              <Label htmlFor="report_type">Report Type</Label>
+              <Select
+                value={report.report_type_id || ""}
+                onValueChange={(value) => setReport({ ...report, report_type_id: value })}
+                disabled={!canEdit}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select report type for AI generation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {report.report_type_id && reportTypes.find(t => t.id === report.report_type_id)?.description && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {reportTypes.find(t => t.id === report.report_type_id)?.description}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
