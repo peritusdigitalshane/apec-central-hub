@@ -151,11 +151,6 @@ export default function Reports() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,24 +161,7 @@ export default function Reports() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src="/src/assets/apec-logo.png" alt="APEC Logo" className="h-10" />
-            <h1 className="text-xl font-bold">APEC Central</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/")}>
-              Dashboard
-            </Button>
-            <Button variant="ghost" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container py-8">
+      <div className="container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold">Reports</h2>
@@ -267,7 +245,7 @@ export default function Reports() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

@@ -293,16 +293,18 @@ export default function ReportEditor() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-background sticky top-0 z-10">
-        <div className="container flex h-16 items-center justify-between">
+      <div className="container py-8 space-y-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/reports")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Report Editor</h1>
-            {report.submitted_for_approval && (
-              <span className="text-sm text-muted-foreground">(Submitted for approval)</span>
-            )}
+            <div>
+              <h1 className="text-xl font-bold">Report Editor</h1>
+              {report.submitted_for_approval && (
+                <span className="text-sm text-muted-foreground">(Submitted for approval)</span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={exportToPDF} variant="outline" className="gap-2">
@@ -329,10 +331,7 @@ export default function ReportEditor() {
             )}
           </div>
         </div>
-      </header>
-
-      <main id="report-content" className="container max-w-4xl py-8">
-        <div className="space-y-6 mb-8">
+        <div id="report-content" className="space-y-6 mb-8">
           <div>
               <Label htmlFor="title">Report Title</Label>
               <Input
@@ -496,7 +495,7 @@ export default function ReportEditor() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
