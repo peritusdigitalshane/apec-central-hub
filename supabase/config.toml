@@ -1,1 +1,4 @@
 project_id = "zbiuxfglgyapypislkhv"
+
+[functions.fetch-openai-models]
+verify_jwt = false
