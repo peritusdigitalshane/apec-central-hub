@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Settings } from "lucide-react";
+import { Loader2, Plus, Settings, Copy, Trash2 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 
 interface Invoice {
@@ -86,6 +86,75 @@ export default function Invoices() {
     } catch (error: any) {
       toast({
         title: "Error creating invoice",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cloneInvoice = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the original invoice
+      const { data: originalInvoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Create new invoice with same metadata but reset status
+      const { data: newInvoice, error: newInvoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          user_id: user.id,
+          customer_name: originalInvoice.customer_name,
+          customer_company: originalInvoice.customer_company,
+          customer_email: originalInvoice.customer_email,
+          customer_phone: originalInvoice.customer_phone,
+          purchase_order: originalInvoice.purchase_order,
+          status: "draft",
+          invoice_number: null, // Clear invoice number
+          date: null, // Clear date
+        })
+        .select()
+        .single();
+
+      if (newInvoiceError) throw newInvoiceError;
+
+      // Get all blocks from the original invoice
+      const { data: originalBlocks, error: blocksError } = await supabase
+        .from("invoice_blocks")
+        .select("*")
+        .eq("invoice_id", id)
+        .order("order_index");
+
+      if (blocksError) throw blocksError;
+
+      // Copy blocks to new invoice
+      if (originalBlocks && originalBlocks.length > 0) {
+        const newBlocks = originalBlocks.map((block) => ({
+          invoice_id: newInvoice.id,
+          type: block.type,
+          content: block.content,
+          order_index: block.order_index,
+        }));
+
+        const { error: insertBlocksError } = await supabase
+          .from("invoice_blocks")
+          .insert(newBlocks);
+
+        if (insertBlocksError) throw insertBlocksError;
+      }
+
+      toast({ title: "Invoice cloned successfully" });
+      navigate(`/invoices/${newInvoice.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Error cloning invoice",
         description: error.message,
         variant: "destructive",
       });
@@ -182,19 +251,31 @@ export default function Invoices() {
                       ${invoice.total_inc_gst.toFixed(2)}
                     </p>
                   )}
-                  {invoice.status === "draft" && (
+                  <div className="flex gap-1 mt-2 justify-end">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteInvoice(invoice.id);
+                        cloneInvoice(invoice.id);
                       }}
-                      className="mt-2"
+                      title="Clone invoice"
                     >
-                      Delete
+                      <Copy className="h-4 w-4" />
                     </Button>
-                  )}
+                    {invoice.status === "draft" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteInvoice(invoice.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
