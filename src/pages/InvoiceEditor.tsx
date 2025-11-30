@@ -1,29 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, ArrowLeft, Send } from "lucide-react";
-import { ReportBlock } from "@/components/blocks/ReportBlock";
-import { BlockTypeSelector } from "@/components/blocks/BlockTypeSelector";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import SignatureCanvas from "react-signature-canvas";
+import apecLogo from "@/assets/apec-logo.png";
 
 interface Invoice {
   id: string;
@@ -40,11 +24,19 @@ interface Invoice {
   total_inc_gst: number | null;
 }
 
-interface Block {
-  id: string;
-  type: string;
-  content: any;
-  order_index: number;
+interface InvoiceData {
+  inspector?: string;
+  company?: string;
+  services: Array<{ description: string; cost: string }>;
+  startTime?: string;
+  finishTime?: string;
+  siteTime?: string;
+  offsiteHours?: string;
+  totalHours?: string;
+  consumables?: string;
+  contactName?: string;
+  contactPhone?: string;
+  signature?: string;
 }
 
 export default function InvoiceEditor() {
@@ -52,21 +44,16 @@ export default function InvoiceEditor() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
+    services: Array(12).fill({ description: "", cost: "" })
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const signaturePadRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     if (id) {
       loadInvoice();
-      loadBlocks();
     }
   }, [id]);
 
@@ -80,6 +67,26 @@ export default function InvoiceEditor() {
 
       if (error) throw error;
       setInvoice(data);
+
+      // Load invoice blocks to get the data
+      const { data: blocks } = await supabase
+        .from("invoice_blocks")
+        .select("*")
+        .eq("invoice_id", id)
+        .order("order_index");
+
+      if (blocks && blocks.length > 0) {
+        const dataBlock = blocks.find(b => b.type === "invoice_data");
+        if (dataBlock && dataBlock.content) {
+          const content = dataBlock.content as any;
+          setInvoiceData(content);
+          if (content.signature && signaturePadRef.current) {
+            setTimeout(() => {
+              signaturePadRef.current?.fromDataURL(content.signature);
+            }, 100);
+          }
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Error loading invoice",
@@ -91,39 +98,20 @@ export default function InvoiceEditor() {
     }
   };
 
-  const loadBlocks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("invoice_blocks")
-        .select("*")
-        .eq("invoice_id", id)
-        .order("order_index");
-
-      if (error) throw error;
-      setBlocks(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error loading blocks",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const saveInvoice = async () => {
     if (!invoice) return;
     setSaving(true);
 
     try {
-      const { error } = await supabase
+      // Save invoice metadata
+      const { error: invoiceError } = await supabase
         .from("invoices")
         .update({
           invoice_number: invoice.invoice_number,
           date: invoice.date,
-          customer_name: invoice.customer_name,
-          customer_company: invoice.customer_company,
-          customer_email: invoice.customer_email,
-          customer_phone: invoice.customer_phone,
+          customer_name: invoiceData.contactName,
+          customer_company: invoiceData.company,
+          customer_phone: invoiceData.contactPhone,
           purchase_order: invoice.purchase_order,
           total: invoice.total,
           gst: invoice.gst,
@@ -131,7 +119,35 @@ export default function InvoiceEditor() {
         })
         .eq("id", id);
 
-      if (error) throw error;
+      if (invoiceError) throw invoiceError;
+
+      // Save signature
+      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+        invoiceData.signature = signaturePadRef.current.toDataURL();
+      }
+
+      // Save invoice data as a block
+      const { data: existingBlocks } = await supabase
+        .from("invoice_blocks")
+        .select("*")
+        .eq("invoice_id", id)
+        .eq("type", "invoice_data");
+
+      if (existingBlocks && existingBlocks.length > 0) {
+        await supabase
+          .from("invoice_blocks")
+          .update({ content: invoiceData as any })
+          .eq("id", existingBlocks[0].id);
+      } else {
+        await supabase
+          .from("invoice_blocks")
+          .insert([{
+            invoice_id: id!,
+            type: "invoice_data",
+            content: invoiceData as any,
+            order_index: 0,
+          }]);
+      }
 
       toast({ title: "Invoice saved successfully" });
     } catch (error: any) {
@@ -146,6 +162,7 @@ export default function InvoiceEditor() {
   };
 
   const submitInvoice = async () => {
+    await saveInvoice();
     if (!invoice) return;
 
     try {
@@ -170,101 +187,15 @@ export default function InvoiceEditor() {
     }
   };
 
-  const addBlock = async (type: string) => {
-    try {
-      const maxOrder = blocks.reduce((max, b) => Math.max(max, b.order_index), -1);
-      const { data, error } = await supabase
-        .from("invoice_blocks")
-        .insert({
-          invoice_id: id,
-          type,
-          content: {},
-          order_index: maxOrder + 1,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setBlocks([...blocks, data]);
-    } catch (error: any) {
-      toast({
-        title: "Error adding block",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const updateService = (index: number, field: 'description' | 'cost', value: string) => {
+    const newServices = [...invoiceData.services];
+    newServices[index] = { ...newServices[index], [field]: value };
+    setInvoiceData({ ...invoiceData, services: newServices });
   };
 
-  const updateBlock = async (blockId: string, content: any) => {
-    try {
-      const { error } = await supabase
-        .from("invoice_blocks")
-        .update({ content })
-        .eq("id", blockId);
-
-      if (error) throw error;
-
-      setBlocks(blocks.map((b) => (b.id === blockId ? { ...b, content } : b)));
-    } catch (error: any) {
-      toast({
-        title: "Error updating block",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteBlock = async (blockId: string) => {
-    try {
-      const { error } = await supabase
-        .from("invoice_blocks")
-        .delete()
-        .eq("id", blockId);
-
-      if (error) throw error;
-      setBlocks(blocks.filter((b) => b.id !== blockId));
-    } catch (error: any) {
-      toast({
-        title: "Error deleting block",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    setBlocks((items) => {
-      const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
-      const reordered = arrayMove(items, oldIndex, newIndex);
-      reorderBlocks(reordered);
-      return reordered;
-    });
-  };
-
-  const reorderBlocks = async (reorderedBlocks: Block[]) => {
-    try {
-      const updates = reorderedBlocks.map((block, index) => ({
-        id: block.id,
-        order_index: index,
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from("invoice_blocks")
-          .update({ order_index: update.order_index })
-          .eq("id", update.id);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error reordering blocks",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const clearSignature = () => {
+    signaturePadRef.current?.clear();
+    setInvoiceData({ ...invoiceData, signature: undefined });
   };
 
   if (loading) {
@@ -280,167 +211,260 @@ export default function InvoiceEditor() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/invoices")}>
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-[900px] mx-auto">
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" onClick={() => navigate("/invoices")} size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-4xl font-bold">
-            Invoice {invoice.invoice_number || "Draft"}
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={saveInvoice} disabled={saving} variant="outline">
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save
-          </Button>
-          {invoice.status === "draft" && (
-            <Button onClick={submitInvoice}>
-              <Send className="h-4 w-4 mr-2" />
-              Submit
+          <div className="flex gap-2">
+            <Button onClick={saveInvoice} disabled={saving} variant="outline" size="sm">
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save
             </Button>
-          )}
-        </div>
-      </div>
-
-      <Card className="p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Invoice Number</Label>
-            <Input
-              value={invoice.invoice_number || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, invoice_number: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Date</Label>
-            <Input
-              type="date"
-              value={invoice.date || ""}
-              onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Customer Name</Label>
-            <Input
-              value={invoice.customer_name || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, customer_name: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Customer Company</Label>
-            <Input
-              value={invoice.customer_company || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, customer_company: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Customer Email</Label>
-            <Input
-              type="email"
-              value={invoice.customer_email || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, customer_email: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Customer Phone</Label>
-            <Input
-              value={invoice.customer_phone || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, customer_phone: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Purchase Order</Label>
-            <Input
-              value={invoice.purchase_order || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, purchase_order: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label>Total (ex GST)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={invoice.total || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, total: parseFloat(e.target.value) || null })
-              }
-            />
-          </div>
-          <div>
-            <Label>GST</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={invoice.gst || ""}
-              onChange={(e) =>
-                setInvoice({ ...invoice, gst: parseFloat(e.target.value) || null })
-              }
-            />
-          </div>
-          <div>
-            <Label>Total (inc GST)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={invoice.total_inc_gst || ""}
-              onChange={(e) =>
-                setInvoice({
-                  ...invoice,
-                  total_inc_gst: parseFloat(e.target.value) || null,
-                })
-              }
-            />
+            {invoice.status === "draft" && (
+              <Button onClick={submitInvoice} size="sm">
+                <Send className="h-4 w-4 mr-2" />
+                Submit
+              </Button>
+            )}
           </div>
         </div>
-      </Card>
 
-      <div className="space-y-4 mb-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Invoice Content</h2>
-          <BlockTypeSelector onSelect={addBlock} />
-        </div>
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={blocks.map((b) => b.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-4">
-              {blocks.map((block) => (
-                <ReportBlock
-                  key={block.id}
-                  block={block}
-                  onUpdate={(content) => updateBlock(block.id, content)}
-                  onDelete={() => deleteBlock(block.id)}
-                  canEdit={invoice.status === "draft"}
+        {/* Invoice Form */}
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 p-8 rounded-lg shadow-lg border-2 border-amber-200 dark:border-amber-800">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-amber-900/20">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">DATE:</span>
+                <Input
+                  type="date"
+                  value={invoice.date || ""}
+                  onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
+                  className="w-48 h-7 text-sm bg-white/50 border-amber-900/30"
                 />
-              ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">INSPECTOR:</span>
+                <Input
+                  value={invoiceData.inspector || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, inspector: e.target.value })}
+                  className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="Inspector name"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">COMPANY:</span>
+                <Input
+                  value={invoiceData.company || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, company: e.target.value })}
+                  className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="Company name"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">PURCHASE ORDER#:</span>
+                <Input
+                  value={invoice.purchase_order || ""}
+                  onChange={(e) => setInvoice({ ...invoice, purchase_order: e.target.value })}
+                  className="w-48 h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="PO number"
+                />
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
+            
+            <div className="ml-8 text-right">
+              <img src={apecLogo} alt="APEC Logo" className="h-16 mb-2 ml-auto" />
+              <div className="text-xs space-y-0.5 text-muted-foreground mb-4">
+                <p>☎ 0414 528 183</p>
+                <p>✉ info@apecinspect.com.au</p>
+                <p>🌐 www.apecinspect.com.au</p>
+              </div>
+              <h1 className="text-3xl font-bold text-red-700 mb-1">TAX INVOICE</h1>
+              <Input
+                value={invoice.invoice_number || ""}
+                onChange={(e) => setInvoice({ ...invoice, invoice_number: e.target.value })}
+                className="w-32 text-2xl font-bold text-red-700 text-center bg-white/50 border-amber-900/30 ml-auto"
+                placeholder="####"
+              />
+            </div>
+          </div>
+
+          {/* Services and Time Tracking */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            {/* Services Table */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/40 border-2 border-amber-900/30 rounded">
+                <div className="grid grid-cols-12 gap-0 border-b-2 border-amber-900/30 bg-amber-100/50">
+                  <div className="col-span-9 p-2 font-semibold text-sm">SERVICES SUPPLIED</div>
+                  <div className="col-span-3 p-2 font-semibold text-sm border-l-2 border-amber-900/30">COSTS</div>
+                </div>
+                {invoiceData.services.map((service, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-0 border-b border-amber-900/10">
+                    <Textarea
+                      value={service.description}
+                      onChange={(e) => updateService(index, 'description', e.target.value)}
+                      className="col-span-9 h-10 resize-none text-sm bg-transparent border-0 rounded-none focus-visible:ring-0 border-r-2 border-amber-900/30"
+                      placeholder="..."
+                    />
+                    <Input
+                      value={service.cost}
+                      onChange={(e) => updateService(index, 'cost', e.target.value)}
+                      className="col-span-3 h-10 text-sm bg-transparent border-0 rounded-none focus-visible:ring-0"
+                      placeholder=""
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Tracking */}
+            <div className="bg-amber-100/50 border-2 border-amber-900/30 rounded p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-semibold">START</span>
+                <Input
+                  type="time"
+                  value={invoiceData.startTime || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, startTime: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-semibold">FINISH</span>
+                <Input
+                  type="time"
+                  value={invoiceData.finishTime || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, finishTime: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-semibold">SITE TIME</span>
+                <Input
+                  value={invoiceData.siteTime || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, siteTime: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="hrs"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-semibold">OFFSITE HOURS</span>
+                <Input
+                  value={invoiceData.offsiteHours || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, offsiteHours: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="hrs"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-semibold">TOTAL Hrs</span>
+                <Input
+                  value={invoiceData.totalHours || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, totalHours: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="hrs"
+                />
+              </div>
+              <div className="pt-2 border-t border-amber-900/30">
+                <span className="text-sm font-semibold block mb-1">CONSUMABLES:</span>
+                <Input
+                  value={invoiceData.consumables || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, consumables: e.target.value })}
+                  className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="Amount"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Contact Info & Signature */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">Contact Name:</span>
+                <Input
+                  value={invoiceData.contactName || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, contactName: e.target.value })}
+                  className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="Name"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">Contact Phone:</span>
+                <Input
+                  value={invoiceData.contactPhone || ""}
+                  onChange={(e) => setInvoiceData({ ...invoiceData, contactPhone: e.target.value })}
+                  className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
+                  placeholder="Phone"
+                />
+              </div>
+              <div className="pt-2">
+                <span className="font-semibold text-sm block mb-1">Signed:</span>
+                <div className="bg-white/50 border-2 border-amber-900/30 rounded">
+                  <SignatureCanvas
+                    ref={signaturePadRef}
+                    canvasProps={{
+                      className: 'w-full h-28 rounded',
+                    }}
+                  />
+                </div>
+                <Button onClick={clearSignature} variant="ghost" size="sm" className="mt-1">
+                  Clear Signature
+                </Button>
+              </div>
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm">TOTAL</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={invoice.total || ""}
+                    onChange={(e) => setInvoice({ ...invoice, total: parseFloat(e.target.value) || null })}
+                    className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm">GST</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={invoice.gst || ""}
+                    onChange={(e) => setInvoice({ ...invoice, gst: parseFloat(e.target.value) || null })}
+                    className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t-2 border-amber-900/30">
+                <span className="font-bold text-base">Includes GST</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={invoice.total_inc_gst || ""}
+                    onChange={(e) => setInvoice({ ...invoice, total_inc_gst: parseFloat(e.target.value) || null })}
+                    className="w-32 h-8 text-base font-bold text-right bg-white/50 border-amber-900/30"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
