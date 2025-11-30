@@ -19,6 +19,12 @@ interface Report {
   client_name: string | null;
   client_email: string | null;
   inspection_date: string | null;
+  job_number: string | null;
+  location: string | null;
+  subject: string | null;
+  order_number: string | null;
+  technician: string | null;
+  report_number: string | null;
 }
 
 interface Block {
@@ -89,6 +95,12 @@ export default function ReportEditor() {
           client_name: report.client_name,
           client_email: report.client_email,
           inspection_date: report.inspection_date,
+          job_number: report.job_number,
+          location: report.location,
+          subject: report.subject,
+          order_number: report.order_number,
+          technician: report.technician,
+          report_number: report.report_number,
         })
         .eq("id", id);
 
@@ -108,6 +120,12 @@ export default function ReportEditor() {
         ? { items: [{ text: "New item", checked: false }] }
         : type === "heading"
         ? { text: "New Heading", level: 2 }
+        : type === "photo_upload"
+        ? { photos: [] }
+        : type === "data_table"
+        ? { title: "Technical Data", rows: [{ label: "Field", value: "" }] }
+        : type === "notes"
+        ? { title: "Notes", text: "" }
         : { text: "" };
 
       const { data, error } = await supabase
@@ -226,7 +244,38 @@ export default function ReportEditor() {
               value={report.title}
               onChange={(e) => setReport({ ...report, title: e.target.value })}
               className="text-2xl font-bold"
+              placeholder="e.g., Fluorescent Magnetic Particle and Ultrasonic Inspection Report"
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label htmlFor="job_number">Job Number</Label>
+              <Input
+                id="job_number"
+                value={report.job_number || ""}
+                onChange={(e) => setReport({ ...report, job_number: e.target.value })}
+                placeholder="27W005597"
+              />
+            </div>
+            <div>
+              <Label htmlFor="report_number">Report Number</Label>
+              <Input
+                id="report_number"
+                value={report.report_number || ""}
+                onChange={(e) => setReport({ ...report, report_number: e.target.value })}
+                placeholder="A2505-001"
+              />
+            </div>
+            <div>
+              <Label htmlFor="order_number">Order Number</Label>
+              <Input
+                id="order_number"
+                value={report.order_number || ""}
+                onChange={(e) => setReport({ ...report, order_number: e.target.value })}
+                placeholder="TBC"
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -236,6 +285,7 @@ export default function ReportEditor() {
                 id="client_name"
                 value={report.client_name || ""}
                 onChange={(e) => setReport({ ...report, client_name: e.target.value })}
+                placeholder="Company Name"
               />
             </div>
             <div>
@@ -245,6 +295,37 @@ export default function ReportEditor() {
                 type="email"
                 value={report.client_email || ""}
                 onChange={(e) => setReport({ ...report, client_email: e.target.value })}
+                placeholder="contact@company.com"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={report.location || ""}
+                onChange={(e) => setReport({ ...report, location: e.target.value })}
+                placeholder="Site location"
+              />
+            </div>
+            <div>
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={report.subject || ""}
+                onChange={(e) => setReport({ ...report, subject: e.target.value })}
+                placeholder="Inspection subject"
+              />
+            </div>
+            <div>
+              <Label htmlFor="technician">Technician</Label>
+              <Input
+                id="technician"
+                value={report.technician || ""}
+                onChange={(e) => setReport({ ...report, technician: e.target.value })}
+                placeholder="Technician name"
               />
             </div>
           </div>

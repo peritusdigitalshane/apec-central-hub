@@ -13,6 +13,8 @@ interface Report {
   client_name: string | null;
   inspection_date: string | null;
   created_at: string;
+  job_number: string | null;
+  location: string | null;
 }
 
 export default function Reports() {
@@ -144,16 +146,18 @@ export default function Reports() {
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{report.title}</CardTitle>
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        {report.client_name && <p>Client: {report.client_name}</p>}
-                        {report.inspection_date && (
-                          <p>Date: {new Date(report.inspection_date).toLocaleDateString()}</p>
-                        )}
-                        <p className="capitalize">Status: {report.status}</p>
-                      </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{report.title}</CardTitle>
+                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                      {report.job_number && <p>Job #: {report.job_number}</p>}
+                      {report.client_name && <p>Client: {report.client_name}</p>}
+                      {report.location && <p>Location: {report.location}</p>}
+                      {report.inspection_date && (
+                        <p>Date: {new Date(report.inspection_date).toLocaleDateString()}</p>
+                      )}
+                      <p className="capitalize">Status: {report.status.replace('_', ' ')}</p>
                     </div>
+                  </div>
                     <Button
                       variant="ghost"
                       size="icon"
