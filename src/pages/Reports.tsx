@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, FileText, Trash2 } from "lucide-react";
 
@@ -15,6 +16,7 @@ interface Report {
   created_at: string;
   job_number: string | null;
   location: string | null;
+  submitted_for_approval: boolean | null;
 }
 
 export default function Reports() {
@@ -147,7 +149,12 @@ export default function Reports() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{report.title}</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {report.title}
+                      {report.submitted_for_approval && (
+                        <Badge variant="secondary">Pending Approval</Badge>
+                      )}
+                    </CardTitle>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       {report.job_number && <p>Job #: {report.job_number}</p>}
                       {report.client_name && <p>Client: {report.client_name}</p>}

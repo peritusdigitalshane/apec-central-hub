@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_blocks: {
         Row: {
           content: Json
@@ -54,6 +81,8 @@ export type Database = {
       }
       reports: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           client_email: string | null
           client_name: string | null
           created_at: string | null
@@ -65,12 +94,15 @@ export type Database = {
           report_number: string | null
           status: string
           subject: string | null
+          submitted_for_approval: boolean | null
           technician: string | null
           title: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           client_email?: string | null
           client_name?: string | null
           created_at?: string | null
@@ -82,12 +114,15 @@ export type Database = {
           report_number?: string | null
           status?: string
           subject?: string | null
+          submitted_for_approval?: boolean | null
           technician?: string | null
           title?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           client_email?: string | null
           client_name?: string | null
           created_at?: string | null
@@ -99,8 +134,33 @@ export type Database = {
           report_number?: string | null
           status?: string
           subject?: string | null
+          submitted_for_approval?: boolean | null
           technician?: string | null
           title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
           user_id?: string
         }
@@ -111,10 +171,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin_or_super: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -241,6 +312,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "staff"],
+    },
   },
 } as const

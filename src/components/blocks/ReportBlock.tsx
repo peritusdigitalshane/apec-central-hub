@@ -22,9 +22,10 @@ interface ReportBlockProps {
   block: Block;
   onUpdate: (content: any) => void;
   onDelete: () => void;
+  canEdit: boolean;
 }
 
-export function ReportBlock({ block, onUpdate, onDelete }: ReportBlockProps) {
+export function ReportBlock({ block, onUpdate, onDelete, canEdit = true }: ReportBlockProps) {
   const {
     attributes,
     listeners,
@@ -65,21 +66,25 @@ export function ReportBlock({ block, onUpdate, onDelete }: ReportBlockProps) {
     <div ref={setNodeRef} style={style} {...attributes}>
       <Card className="p-4 relative group">
         <div className="flex gap-2">
-          <div
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 transition-opacity"
-          >
-            <GripVertical className="h-5 w-5 text-muted-foreground" />
-          </div>
+          {canEdit && (
+            <div
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
           <div className="flex-1">{renderBlockContent()}</div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </Card>
     </div>
