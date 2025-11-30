@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Type, Heading, CheckSquare, Image } from "lucide-react";
+import { Plus, Type, Heading, CheckSquare, Image, Camera, Table, FileText } from "lucide-react";
 
 interface BlockTypeSelectorProps {
   onSelect: (type: string) => void;
@@ -29,13 +29,21 @@ export function BlockTypeSelector({ onSelect }: BlockTypeSelectorProps) {
           <Type className="h-4 w-4" />
           Text
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSelect("photo_upload")} className="gap-2">
+          <Camera className="h-4 w-4" />
+          Photo Upload
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSelect("data_table")} className="gap-2">
+          <Table className="h-4 w-4" />
+          Data Table
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onSelect("checklist")} className="gap-2">
           <CheckSquare className="h-4 w-4" />
           Checklist
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onSelect("image")} className="gap-2">
-          <Image className="h-4 w-4" />
-          Image
+        <DropdownMenuItem onClick={() => onSelect("notes")} className="gap-2">
+          <FileText className="h-4 w-4" />
+          Notes
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

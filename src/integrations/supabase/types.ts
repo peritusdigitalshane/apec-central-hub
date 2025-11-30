@@ -59,7 +59,13 @@ export type Database = {
           created_at: string | null
           id: string
           inspection_date: string | null
+          job_number: string | null
+          location: string | null
+          order_number: string | null
+          report_number: string | null
           status: string
+          subject: string | null
+          technician: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -70,7 +76,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           inspection_date?: string | null
+          job_number?: string | null
+          location?: string | null
+          order_number?: string | null
+          report_number?: string | null
           status?: string
+          subject?: string | null
+          technician?: string | null
           title?: string
           updated_at?: string | null
           user_id: string
@@ -81,7 +93,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           inspection_date?: string | null
+          job_number?: string | null
+          location?: string | null
+          order_number?: string | null
+          report_number?: string | null
           status?: string
+          subject?: string | null
+          technician?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string

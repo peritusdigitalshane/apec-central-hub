@@ -7,6 +7,9 @@ import { TextBlock } from "./TextBlock";
 import { HeadingBlock } from "./HeadingBlock";
 import { ChecklistBlock } from "./ChecklistBlock";
 import { ImageBlock } from "./ImageBlock";
+import { PhotoUploadBlock } from "./PhotoUploadBlock";
+import { DataTableBlock } from "./DataTableBlock";
+import { NotesBlock } from "./NotesBlock";
 
 interface Block {
   id: string;
@@ -47,6 +50,12 @@ export function ReportBlock({ block, onUpdate, onDelete }: ReportBlockProps) {
         return <ChecklistBlock content={block.content} onUpdate={onUpdate} />;
       case "image":
         return <ImageBlock content={block.content} onUpdate={onUpdate} />;
+      case "photo_upload":
+        return <PhotoUploadBlock content={block.content} onUpdate={onUpdate} />;
+      case "data_table":
+        return <DataTableBlock content={block.content} onUpdate={onUpdate} />;
+      case "notes":
+        return <NotesBlock content={block.content} onUpdate={onUpdate} />;
       default:
         return <div>Unknown block type: {block.type}</div>;
     }
