@@ -13,7 +13,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Shield, User, Crown } from "lucide-react";
+import { ArrowLeft, Shield, User, Crown, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface UserWithRole {
   id: string;
@@ -28,6 +31,11 @@ export default function UserManagement() {
   const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -98,8 +106,10 @@ export default function UserManagement() {
         return <Badge className="gap-1"><Crown className="h-3 w-3" />Super Admin</Badge>;
       case "admin":
         return <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" />Admin</Badge>;
-      default:
+      case "staff":
         return <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />Staff</Badge>;
+      default:
+        return <Badge variant="destructive" className="gap-1">Inactive</Badge>;
     }
   };
 
@@ -112,6 +122,50 @@ export default function UserManagement() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newUserEmail,
+          password: newUserPassword,
+          fullName: newUserFullName,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      toast.success(result.message || "User created successfully");
+      setCreateDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserFullName("");
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create user");
+    } finally {
+      setCreating(false);
+    }
   };
 
   if (roleLoading || loading) {
@@ -141,7 +195,61 @@ export default function UserManagement() {
       <main className="container py-8">
         <Card>
           <CardHeader>
-            <CardTitle>All Users</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>All Users</CardTitle>
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Create a new user account. They will be inactive until you assign them a role.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        value={newUserFullName}
+                        onChange={(e) => setNewUserFullName(e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        placeholder="user@example.com"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" disabled={creating} className="w-full">
+                      {creating ? "Creating..." : "Create User"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
