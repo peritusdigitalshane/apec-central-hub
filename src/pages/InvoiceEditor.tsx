@@ -64,6 +64,24 @@ export default function InvoiceEditor() {
     }
   }, [id]);
 
+  // Auto-calculate totals when services change
+  useEffect(() => {
+    const total = invoiceData.services.reduce((sum, service) => {
+      const cost = parseFloat(service.cost) || 0;
+      return sum + cost;
+    }, 0);
+    
+    const gst = total * 0.1; // 10% GST
+    const totalIncGst = total + gst;
+
+    setInvoice(prev => prev ? {
+      ...prev,
+      total,
+      gst,
+      total_inc_gst: totalIncGst
+    } : null);
+  }, [invoiceData.services]);
+
   const loadInvoice = async () => {
     try {
       const { data, error } = await supabase
@@ -523,45 +541,27 @@ export default function InvoiceEditor() {
                 <span className="font-semibold text-sm">TOTAL</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={invoice.total || ""}
-                    onChange={(e) => setInvoice({ ...invoice, total: parseFloat(e.target.value) || null })}
-                    className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
-                    placeholder="0.00"
-                    disabled={!canEdit}
-                  />
+                  <div className="w-32 h-7 text-sm text-right px-3 py-1 bg-white/30 border-2 border-amber-900/30 rounded-md font-semibold">
+                    {invoice.total?.toFixed(2) || "0.00"}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm">GST</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={invoice.gst || ""}
-                    onChange={(e) => setInvoice({ ...invoice, gst: parseFloat(e.target.value) || null })}
-                    className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
-                    placeholder="0.00"
-                    disabled={!canEdit}
-                  />
+                  <div className="w-32 h-7 text-sm text-right px-3 py-1 bg-white/30 border-2 border-amber-900/30 rounded-md font-semibold">
+                    {invoice.gst?.toFixed(2) || "0.00"}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2 border-t-2 border-amber-900/30">
                 <span className="font-bold text-base">Includes GST</span>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold">$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={invoice.total_inc_gst || ""}
-                    onChange={(e) => setInvoice({ ...invoice, total_inc_gst: parseFloat(e.target.value) || null })}
-                    className="w-32 h-8 text-base font-bold text-right bg-white/50 border-amber-900/30"
-                    placeholder="0.00"
-                    disabled={!canEdit}
-                  />
+                  <div className="w-32 h-8 text-base font-bold text-right px-3 py-1 bg-white/30 border-2 border-amber-900/30 rounded-md">
+                    {invoice.total_inc_gst?.toFixed(2) || "0.00"}
+                  </div>
                 </div>
               </div>
             </div>
