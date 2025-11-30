@@ -5,6 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: "https://zbiuxfglgyapypislkhv.supabase.co"
+        VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiaXV4ZmdsZ3lhcHlwaXNsa2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTAyNjQsImV4cCI6MjA4MDA2NjI2NH0.mjlHVn5ipiJuVG1AmEVRUjoh9AKhjBlgioHrb1vuEqg"
     ports:
       - "3333:80"
     environment:

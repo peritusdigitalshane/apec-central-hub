@@ -68,7 +68,7 @@ docker-compose restart
 
 ## Important Notes
 
-1. **Environment Variables**: The Supabase connection details are built into the application at build time from the `.env` file. Make sure your `.env` file is properly configured before building.
+1. **Environment Variables**: The Supabase connection details are built into the application at build time from the `docker-compose.yml` file. These credentials are embedded in the built JavaScript bundle.
 
 2. **Production Deployment**: For production, consider:
    - Using a reverse proxy (like Traefik or nginx) with SSL/TLS
