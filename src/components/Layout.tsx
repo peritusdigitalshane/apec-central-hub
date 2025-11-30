@@ -41,7 +41,7 @@ export default function Layout({ children }: LayoutProps) {
                 variant="ghost"
                 className={cn(
                   "text-muted-foreground hover:text-primary",
-                  isActive("/") && !isActive("/reports") && !isActive("/invoices") && !isActive("/templates") && !isActive("/users") && !isActive("/super-admin") && "text-primary"
+                  isActive("/") && !isActive("/reports") && !isActive("/invoices") && !isActive("/users") && !isActive("/super-admin") && "text-primary"
                 )}
                 onClick={() => navigate("/")}
               >
@@ -51,11 +51,11 @@ export default function Layout({ children }: LayoutProps) {
                 variant="ghost"
                 className={cn(
                   "text-muted-foreground hover:text-primary",
-                  isActive("/templates") && "text-primary"
+                  (isActive("/reports") || isActive("/templates")) && "text-primary"
                 )}
-                onClick={() => navigate("/templates")}
+                onClick={() => navigate("/reports")}
               >
-                Templates
+                Reports
               </Button>
               <Button
                 variant="ghost"
@@ -66,16 +66,6 @@ export default function Layout({ children }: LayoutProps) {
                 onClick={() => navigate("/invoices")}
               >
                 Invoices
-              </Button>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "text-muted-foreground hover:text-primary",
-                  isActive("/reports") && "text-primary"
-                )}
-                onClick={() => navigate("/reports")}
-              >
-                Reports
               </Button>
               {isAdmin && (
                 <Button
