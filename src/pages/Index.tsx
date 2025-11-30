@@ -1,9 +1,17 @@
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, ClipboardList, BarChart3, Settings, Plus, Search } from "lucide-react";
 import logo from "@/assets/apec-logo.png";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
   const quickActions = [
     {
       icon: Plus,
@@ -66,11 +74,14 @@ const Index = () => {
               <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                 Quotes
               </Button>
-              <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+              <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/reports")}>
                 Reports
               </Button>
               <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                 Projects
+              </Button>
+              <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={handleLogout}>
+                Logout
               </Button>
             </nav>
             <Button variant="outline" size="icon">
@@ -118,6 +129,7 @@ const Index = () => {
                 key={action.title}
                 className="hover:shadow-medium hover:border-primary/50 transition-all duration-300 cursor-pointer group border-border animate-slide-in"
                 style={{ animationDelay: `${index * 100}ms` }}
+                onClick={() => action.title === "New Report" && navigate("/reports")}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
