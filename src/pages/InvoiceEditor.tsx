@@ -82,6 +82,32 @@ export default function InvoiceEditor() {
     } : null);
   }, [invoiceData.services]);
 
+  // Auto-calculate time fields
+  useEffect(() => {
+    // Calculate site time from start and finish
+    if (invoiceData.startTime && invoiceData.finishTime) {
+      const [startHours, startMinutes] = invoiceData.startTime.split(':').map(Number);
+      const [finishHours, finishMinutes] = invoiceData.finishTime.split(':').map(Number);
+      
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const finishTotalMinutes = finishHours * 60 + finishMinutes;
+      
+      const diffMinutes = finishTotalMinutes - startTotalMinutes;
+      const siteHours = (diffMinutes / 60).toFixed(2);
+      
+      setInvoiceData(prev => ({ ...prev, siteTime: siteHours }));
+    }
+  }, [invoiceData.startTime, invoiceData.finishTime]);
+
+  // Calculate total hours from site time and offsite hours
+  useEffect(() => {
+    const siteHours = parseFloat(invoiceData.siteTime || '0');
+    const offsiteHours = parseFloat(invoiceData.offsiteHours || '0');
+    const total = (siteHours + offsiteHours).toFixed(2);
+    
+    setInvoiceData(prev => ({ ...prev, totalHours: total }));
+  }, [invoiceData.siteTime, invoiceData.offsiteHours]);
+
   const loadInvoice = async () => {
     try {
       const { data, error } = await supabase
