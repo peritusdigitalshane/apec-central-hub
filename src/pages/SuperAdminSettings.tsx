@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import OpenAISettings from "@/components/OpenAISettings";
 import { toast } from "sonner";
 import { ArrowLeft, Shield, Database, Settings, Users } from "lucide-react";
 
@@ -51,88 +52,92 @@ export default function SuperAdminSettings() {
       </header>
 
       <main className="container py-8">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/users")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>User Management</CardTitle>
-                  <CardDescription>Manage all users and their roles</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                View, edit, and manage user accounts and role assignments
-              </p>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <OpenAISettings />
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Database className="h-6 w-6 text-primary" />
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/users")}>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>Manage all users and their roles</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle>Database Access</CardTitle>
-                  <CardDescription>Direct database management</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Access the Supabase dashboard for advanced database operations
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => window.open("https://supabase.com/dashboard/project/zbiuxfglgyapypislkhv", "_blank")}
-              >
-                Open Dashboard
-              </Button>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  View, edit, and manage user accounts and role assignments
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Settings className="h-6 w-6 text-primary" />
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Database className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Database Access</CardTitle>
+                    <CardDescription>Direct database management</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle>System Settings</CardTitle>
-                  <CardDescription>Configure application settings</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Coming soon: Global settings, email templates, and more
-              </p>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Access the Supabase dashboard for advanced database operations
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open("https://supabase.com/dashboard/project/zbiuxfglgyapypislkhv", "_blank")}
+                >
+                  Open Dashboard
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Shield className="h-6 w-6 text-primary" />
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Settings className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>System Settings</CardTitle>
+                    <CardDescription>Configure application settings</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle>Security & Audit</CardTitle>
-                  <CardDescription>View security logs and audit trails</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Coming soon: Global settings, email templates, and more
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Security & Audit</CardTitle>
+                    <CardDescription>View security logs and audit trails</CardDescription>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Coming soon: Activity logs, security events, and audit reports
-              </p>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Coming soon: Activity logs, security events, and audit reports
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
