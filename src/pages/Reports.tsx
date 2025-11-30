@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Copy } from "lucide-react";
 
 interface Report {
   id: string;
@@ -60,6 +60,77 @@ export default function Reports() {
       navigate(`/reports/${data.id}`);
     } catch (error: any) {
       toast.error("Failed to create report");
+    }
+  };
+
+  const cloneReport = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the original report
+      const { data: originalReport, error: reportError } = await supabase
+        .from("reports")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (reportError) throw reportError;
+
+      // Create new report with same metadata but reset status
+      const { data: newReport, error: newReportError } = await supabase
+        .from("reports")
+        .insert({
+          user_id: user.id,
+          title: `${originalReport.title} (Copy)`,
+          client_name: originalReport.client_name,
+          client_email: originalReport.client_email,
+          job_number: originalReport.job_number,
+          location: originalReport.location,
+          order_number: originalReport.order_number,
+          technician: originalReport.technician,
+          report_number: null, // Clear report number for new report
+          subject: originalReport.subject,
+          inspection_date: null, // Clear inspection date
+          template_id: originalReport.template_id,
+          status: "draft",
+          submitted_for_approval: false,
+        })
+        .select()
+        .single();
+
+      if (newReportError) throw newReportError;
+
+      // Get all blocks from the original report
+      const { data: originalBlocks, error: blocksError } = await supabase
+        .from("report_blocks")
+        .select("*")
+        .eq("report_id", id)
+        .order("order_index");
+
+      if (blocksError) throw blocksError;
+
+      // Copy blocks to new report
+      if (originalBlocks && originalBlocks.length > 0) {
+        const newBlocks = originalBlocks.map((block) => ({
+          report_id: newReport.id,
+          type: block.type,
+          content: block.content,
+          order_index: block.order_index,
+        }));
+
+        const { error: insertBlocksError } = await supabase
+          .from("report_blocks")
+          .insert(newBlocks);
+
+        if (insertBlocksError) throw insertBlocksError;
+      }
+
+      toast.success("Report cloned successfully");
+      navigate(`/reports/${newReport.id}`);
+    } catch (error: any) {
+      toast.error("Failed to clone report");
+      console.error(error);
     }
   };
 
@@ -165,6 +236,19 @@ export default function Reports() {
                       <p className="capitalize">Status: {report.status.replace('_', ' ')}</p>
                     </div>
                   </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cloneReport(report.id);
+                      }}
+                      title="Clone report"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -176,6 +260,7 @@ export default function Reports() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                  </div>
                   </div>
                 </CardHeader>
               </Card>
