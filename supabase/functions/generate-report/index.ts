@@ -26,6 +26,32 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get OpenAI API key and model from platform settings
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('platform_settings')
+      .select('value')
+      .eq('key', 'openai_model')
+      .single();
+
+    if (settingsError || !settingsData?.value) {
+      console.error('Error fetching OpenAI settings:', settingsError);
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API not configured. Please configure it in Super Admin Settings.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const settings = settingsData.value as { model: string; apiKey: string };
+    const openaiApiKey = settings.apiKey;
+    const openaiModel = settings.model;
+
+    if (!openaiApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not found in settings' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get report type details
     const { data: reportType, error: reportTypeError } = await supabase
       .from('report_types')
@@ -66,16 +92,6 @@ serve(async (req) => {
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
 
-    // Call Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const systemPrompt = `You are an expert inspection report writer. Generate a comprehensive ${reportType.name} report based on the knowledge base examples and user-provided information.
 
 KNOWLEDGE BASE (Previous ${reportType.name} Reports):
@@ -86,14 +102,15 @@ ${userContext}
 
 Generate a detailed, professional inspection report following the style and structure from the knowledge base examples. Include all relevant sections and details. Output the report content as plain text, ready to be used in the report blocks.`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call OpenAI API
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: openaiModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate the inspection report now.' }
@@ -103,19 +120,19 @@ Generate a detailed, professional inspection report following the style and stru
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
+      console.error('OpenAI API error:', aiResponse.status, errorText);
       
       if (aiResponse.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          JSON.stringify({ error: 'OpenAI rate limit exceeded. Please try again later.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      if (aiResponse.status === 402) {
+      if (aiResponse.status === 401) {
         return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your workspace.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Invalid OpenAI API key. Please update your settings.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
