@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ArrowLeft, Send, Download } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Send, Download, CheckCircle } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import apecLogo from "@/assets/apec-logo.png";
 import html2pdf from "html2pdf.js";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Invoice {
   id: string;
@@ -23,6 +24,9 @@ interface Invoice {
   total: number | null;
   gst: number | null;
   total_inc_gst: number | null;
+  submitted_for_approval: boolean | null;
+  approved_by: string | null;
+  approved_at: string | null;
 }
 
 interface InvoiceData {
@@ -44,12 +48,14 @@ export default function InvoiceEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { role, isAdmin } = useUserRole();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     services: Array(12).fill({ description: "", cost: "" })
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const signaturePadRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
@@ -166,22 +172,54 @@ export default function InvoiceEditor() {
     await saveInvoice();
     if (!invoice) return;
 
+    setSubmitting(true);
     try {
       const { error } = await supabase
         .from("invoices")
         .update({
-          status: "submitted",
-          submitted_at: new Date().toISOString(),
+          submitted_for_approval: true,
+          status: "pending",
         })
         .eq("id", id);
 
       if (error) throw error;
 
-      toast({ title: "Invoice submitted successfully" });
+      toast({ title: "Invoice submitted for approval" });
       navigate("/invoices");
     } catch (error: any) {
       toast({
         title: "Error submitting invoice",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const approveInvoice = async () => {
+    if (!invoice) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          status: "approved",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Invoice approved successfully" });
+      loadInvoice();
+    } catch (error: any) {
+      toast({
+        title: "Error approving invoice",
         description: error.message,
         variant: "destructive",
       });
@@ -235,6 +273,8 @@ export default function InvoiceEditor() {
     return <div>Invoice not found</div>;
   }
 
+  const canEdit = !invoice.submitted_for_approval || isAdmin;
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-[900px] mx-auto">
@@ -244,19 +284,32 @@ export default function InvoiceEditor() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {invoice.submitted_for_approval && (
+              <span className="text-sm text-muted-foreground mr-2">
+                (Submitted for approval)
+              </span>
+            )}
             <Button onClick={exportToPDF} variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
-            <Button onClick={saveInvoice} disabled={saving} variant="outline" size="sm">
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Save
-            </Button>
-            {invoice.status === "draft" && (
-              <Button onClick={submitInvoice} size="sm">
-                <Send className="h-4 w-4 mr-2" />
-                Submit
+            {canEdit && (
+              <Button onClick={saveInvoice} disabled={saving} variant="outline" size="sm">
+                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save
+              </Button>
+            )}
+            {!invoice.submitted_for_approval && role === "staff" && (
+              <Button onClick={submitInvoice} disabled={submitting} size="sm">
+                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                Submit for Approval
+              </Button>
+            )}
+            {isAdmin && invoice.submitted_for_approval && invoice.status !== "approved" && (
+              <Button onClick={approveInvoice} size="sm">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve Invoice
               </Button>
             )}
           </div>
@@ -274,6 +327,7 @@ export default function InvoiceEditor() {
                   value={invoice.date || ""}
                   onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
                   className="w-48 h-7 text-sm bg-white/50 border-amber-900/30"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -283,6 +337,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, inspector: e.target.value })}
                   className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="Inspector name"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -292,6 +347,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, company: e.target.value })}
                   className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="Company name"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -301,6 +357,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoice({ ...invoice, purchase_order: e.target.value })}
                   className="w-48 h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="PO number"
+                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -318,6 +375,7 @@ export default function InvoiceEditor() {
                 onChange={(e) => setInvoice({ ...invoice, invoice_number: e.target.value })}
                 className="w-32 text-2xl font-bold text-red-700 text-center bg-white/50 border-amber-900/30 ml-auto"
                 placeholder="####"
+                disabled={!canEdit}
               />
             </div>
           </div>
@@ -338,12 +396,14 @@ export default function InvoiceEditor() {
                       onChange={(e) => updateService(index, 'description', e.target.value)}
                       className="col-span-9 h-10 resize-none text-sm bg-transparent border-0 rounded-none focus-visible:ring-0 border-r-2 border-amber-900/30"
                       placeholder="..."
+                      disabled={!canEdit}
                     />
                     <Input
                       value={service.cost}
                       onChange={(e) => updateService(index, 'cost', e.target.value)}
                       className="col-span-3 h-10 text-sm bg-transparent border-0 rounded-none focus-visible:ring-0"
                       placeholder=""
+                      disabled={!canEdit}
                     />
                   </div>
                 ))}
@@ -359,6 +419,7 @@ export default function InvoiceEditor() {
                   value={invoiceData.startTime || ""}
                   onChange={(e) => setInvoiceData({ ...invoiceData, startTime: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 items-center">
@@ -368,6 +429,7 @@ export default function InvoiceEditor() {
                   value={invoiceData.finishTime || ""}
                   onChange={(e) => setInvoiceData({ ...invoiceData, finishTime: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 items-center">
@@ -377,6 +439,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, siteTime: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="hrs"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 items-center">
@@ -386,6 +449,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, offsiteHours: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="hrs"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 items-center">
@@ -395,6 +459,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, totalHours: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="hrs"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="pt-2 border-t border-amber-900/30">
@@ -404,6 +469,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, consumables: e.target.value })}
                   className="h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="Amount"
+                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -420,6 +486,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, contactName: e.target.value })}
                   className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="Name"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -429,6 +496,7 @@ export default function InvoiceEditor() {
                   onChange={(e) => setInvoiceData({ ...invoiceData, contactPhone: e.target.value })}
                   className="flex-1 h-7 text-sm bg-white/50 border-amber-900/30"
                   placeholder="Phone"
+                  disabled={!canEdit}
                 />
               </div>
               <div className="pt-2">
@@ -441,9 +509,11 @@ export default function InvoiceEditor() {
                     }}
                   />
                 </div>
-                <Button onClick={clearSignature} variant="ghost" size="sm" className="mt-1">
-                  Clear Signature
-                </Button>
+                {canEdit && (
+                  <Button onClick={clearSignature} variant="ghost" size="sm" className="mt-1">
+                    Clear Signature
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -460,6 +530,7 @@ export default function InvoiceEditor() {
                     onChange={(e) => setInvoice({ ...invoice, total: parseFloat(e.target.value) || null })}
                     className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
                     placeholder="0.00"
+                    disabled={!canEdit}
                   />
                 </div>
               </div>
@@ -474,6 +545,7 @@ export default function InvoiceEditor() {
                     onChange={(e) => setInvoice({ ...invoice, gst: parseFloat(e.target.value) || null })}
                     className="w-32 h-7 text-sm text-right bg-white/50 border-amber-900/30"
                     placeholder="0.00"
+                    disabled={!canEdit}
                   />
                 </div>
               </div>
@@ -488,6 +560,7 @@ export default function InvoiceEditor() {
                     onChange={(e) => setInvoice({ ...invoice, total_inc_gst: parseFloat(e.target.value) || null })}
                     className="w-32 h-8 text-base font-bold text-right bg-white/50 border-amber-900/30"
                     placeholder="0.00"
+                    disabled={!canEdit}
                   />
                 </div>
               </div>
