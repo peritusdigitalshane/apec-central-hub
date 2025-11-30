@@ -81,6 +81,8 @@ export type Database = {
       }
       invoices: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
           customer_company: string | null
           customer_email: string | null
@@ -93,12 +95,15 @@ export type Database = {
           purchase_order: string | null
           status: string
           submitted_at: string | null
+          submitted_for_approval: boolean | null
           total: number | null
           total_inc_gst: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           customer_company?: string | null
           customer_email?: string | null
@@ -111,12 +116,15 @@ export type Database = {
           purchase_order?: string | null
           status?: string
           submitted_at?: string | null
+          submitted_for_approval?: boolean | null
           total?: number | null
           total_inc_gst?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           customer_company?: string | null
           customer_email?: string | null
@@ -129,6 +137,7 @@ export type Database = {
           purchase_order?: string | null
           status?: string
           submitted_at?: string | null
+          submitted_for_approval?: boolean | null
           total?: number | null
           total_inc_gst?: number | null
           updated_at?: string | null
