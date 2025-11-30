@@ -313,12 +313,14 @@ export default function Reports() {
 
           {/* My Reports Tab */}
           <TabsContent value="my-reports">
-            <div className="flex justify-end mb-4">
-              <Button onClick={createReport} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Report
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex justify-end mb-4">
+                <Button onClick={createReport} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Report
+                </Button>
+              </div>
+            )}
 
             {reports.length === 0 ? (
               <Card className="text-center py-12">
@@ -326,12 +328,21 @@ export default function Reports() {
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No reports yet</h3>
                   <p className="text-muted-foreground mb-6">
-                    Get started by creating your first inspection report
+                    {isAdmin 
+                      ? "Get started by creating your first inspection report" 
+                      : "Select a template from the Templates tab to create your first report"}
                   </p>
-                  <Button onClick={createReport} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create Report
-                  </Button>
+                  {isAdmin ? (
+                    <Button onClick={createReport} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create Report
+                    </Button>
+                  ) : (
+                    <Button onClick={() => document.querySelector('[value="templates"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))} className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Browse Templates
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
