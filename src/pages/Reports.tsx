@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2, Copy, Edit } from "lucide-react";
+import { Plus, FileText, Trash2, Copy, Edit, CheckCircle, XCircle } from "lucide-react";
 
 interface Report {
   id: string;
@@ -35,12 +35,16 @@ export default function Reports() {
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [reports, setReports] = useState<Report[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [pendingReports, setPendingReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadReports();
     loadTemplates();
-  }, []);
+    if (isAdmin) {
+      loadPendingReports();
+    }
+  }, [isAdmin]);
 
   const loadReports = async () => {
     try {
@@ -69,6 +73,22 @@ export default function Reports() {
       setTemplates(data || []);
     } catch (error: any) {
       toast.error("Failed to load templates");
+    }
+  };
+
+  const loadPendingReports = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("reports")
+        .select("*")
+        .eq("submitted_for_approval", true)
+        .neq("status", "completed")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPendingReports(data || []);
+    } catch (error: any) {
+      toast.error("Failed to load pending reports");
     }
   };
 
@@ -174,8 +194,52 @@ export default function Reports() {
       if (error) throw error;
       toast.success("Report deleted");
       loadReports();
+      if (isAdmin) loadPendingReports();
     } catch (error: any) {
       toast.error("Failed to delete report");
+    }
+  };
+
+  const approveReport = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("reports")
+        .update({
+          status: "completed",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          submitted_for_approval: false,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Report approved");
+      loadPendingReports();
+    } catch (error: any) {
+      toast.error("Failed to approve report");
+    }
+  };
+
+  const rejectReport = async (id: string) => {
+    if (!confirm("Are you sure you want to reject this report? It will be sent back to the staff member.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("reports")
+        .update({
+          submitted_for_approval: false,
+          status: "draft",
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Report rejected and sent back for revision");
+      loadPendingReports();
+    } catch (error: any) {
+      toast.error("Failed to reject report");
     }
   };
 
@@ -306,8 +370,9 @@ export default function Reports() {
         </div>
 
         <Tabs defaultValue="my-reports" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+          <TabsList className={`grid w-full max-w-2xl mb-6 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="my-reports">My Reports</TabsTrigger>
+            {isAdmin && <TabsTrigger value="pending-approval">Pending Approval</TabsTrigger>}
             <TabsTrigger value="templates">Templates</TabsTrigger>
           </TabsList>
 
@@ -404,6 +469,84 @@ export default function Reports() {
               </div>
             )}
           </TabsContent>
+
+          {/* Pending Approval Tab */}
+          {isAdmin && (
+            <TabsContent value="pending-approval">
+              {pendingReports.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No reports pending approval</h3>
+                    <p className="text-muted-foreground">
+                      Reports submitted by staff will appear here for review
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {pendingReports.map((report) => (
+                    <Card key={report.id} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {report.title}
+                              <Badge variant="secondary">Pending</Badge>
+                            </CardTitle>
+                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                              {report.job_number && <p>Job #: {report.job_number}</p>}
+                              {report.client_name && <p>Client: {report.client_name}</p>}
+                              {report.location && <p>Location: {report.location}</p>}
+                              {report.inspection_date && (
+                                <p>Date: {new Date(report.inspection_date).toLocaleDateString()}</p>
+                              )}
+                              <p className="text-xs mt-2">
+                                Submitted: {new Date(report.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="flex-1 gap-2"
+                          onClick={() => navigate(`/reports/${report.id}`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          Review
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            approveReport(report.id);
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            rejectReport(report.id);
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
 
           {/* Templates Tab */}
           <TabsContent value="templates">
