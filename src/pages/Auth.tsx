@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import logo from "@/assets/apec-logo.png";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -47,7 +48,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img 
-            src="/src/assets/apec-logo.png" 
+            src={logo} 
             alt="APEC Logo" 
             className="h-16 mx-auto mb-4"
           />
