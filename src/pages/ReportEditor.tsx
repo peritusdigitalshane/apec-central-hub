@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Send, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, Send, CheckCircle, Download } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { ReportBlock } from "@/components/blocks/ReportBlock";
 import { BlockTypeSelector } from "@/components/blocks/BlockTypeSelector";
+import html2pdf from "html2pdf.js";
 
 interface Report {
   id: string;
@@ -260,6 +261,26 @@ export default function ReportEditor() {
     }
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('report-content');
+    if (!element) return;
+
+    const opt = {
+      margin: 10,
+      filename: `report-${report?.report_number || report?.title || 'draft'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+      toast.success("PDF exported successfully");
+    } catch (error: any) {
+      toast.error("Failed to export PDF");
+    }
+  };
+
   const canEdit = !report?.submitted_for_approval || isAdmin;
   
   if (loading || !report) {
@@ -284,6 +305,10 @@ export default function ReportEditor() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={exportToPDF} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export PDF
+            </Button>
             {canEdit && (
               <Button onClick={saveReport} disabled={saving} variant="outline" className="gap-2">
                 <Save className="h-4 w-4" />
@@ -306,7 +331,7 @@ export default function ReportEditor() {
         </div>
       </header>
 
-      <main className="container max-w-4xl py-8">
+      <main id="report-content" className="container max-w-4xl py-8">
         <div className="space-y-6 mb-8">
           <div>
               <Label htmlFor="title">Report Title</Label>
