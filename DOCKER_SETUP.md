@@ -14,16 +14,34 @@ docker build -t apec-central .
 
 ### Option 1: Using Docker directly
 ```bash
-docker run -d -p 8080:80 --name apec-central apec-central
+docker run -d -p 3333:80 --name apec-central apec-central
 ```
 
 ### Option 2: Using Docker Compose (recommended)
 ```bash
+# Build and start in detached mode
+docker-compose up -d --build
+
+# Or separately:
+docker-compose build
 docker-compose up -d
 ```
 
+## Quick Commands
+
+```bash
+# Build the image
+docker-compose build
+
+# Start containers in detached mode
+docker-compose up -d
+
+# Build and start (recommended)
+docker-compose up -d --build
+```
+
 ## Accessing the Application
-Once running, access the application at: `http://localhost:8080`
+Once running, access the application at: `http://localhost:3333`
 
 ## Managing the Container
 
