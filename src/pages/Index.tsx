@@ -9,43 +9,25 @@ const Index = () => {
   const { role, isSuperAdmin, isAdmin } = useUserRole();
   const quickActions = [
     {
-      icon: Plus,
-      title: "New Quote",
-      description: "Create a new inspection quote",
-      color: "text-primary",
-    },
-    {
       icon: FileText,
       title: "New Report",
       description: "Start a new inspection report",
-      color: "text-accent",
+      color: "text-primary",
+      action: () => navigate("/reports"),
     },
     {
-      icon: Search,
-      title: "Search Records",
-      description: "Find existing quotes and reports",
-      color: "text-muted-foreground",
-    },
-  ];
-
-  const stats = [
-    {
-      label: "Active Quotes",
-      value: "12",
-      icon: ClipboardList,
-      trend: "+3 this week",
-    },
-    {
-      label: "Pending Reports",
-      value: "8",
       icon: FileText,
-      trend: "2 due today",
+      title: "View Reports",
+      description: "Browse all inspection reports",
+      color: "text-accent",
+      action: () => navigate("/reports"),
     },
     {
-      label: "Completed This Month",
-      value: "45",
-      icon: BarChart3,
-      trend: "+12% vs last month",
+      icon: FileText,
+      title: "New Invoice",
+      description: "Create a new invoice",
+      color: "text-primary",
+      action: () => navigate("/invoices"),
     },
   ];
 
@@ -55,33 +37,11 @@ const Index = () => {
         {/* Welcome Section */}
         <div className="mb-8 animate-fade-in">
           <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back</h2>
-          <p className="text-muted-foreground">Here's what's happening with your inspections today.</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card 
-              key={stat.label} 
-              className="hover:shadow-medium transition-all duration-300 border-border animate-fade-in"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground mb-1">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.trend}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <p className="text-muted-foreground">Manage your inspections, reports, and invoices</p>
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
+        <div>
           <h3 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {quickActions.map((action, index) => (
@@ -89,7 +49,7 @@ const Index = () => {
                 key={action.title}
                 className="hover:shadow-medium hover:border-primary/50 transition-all duration-300 cursor-pointer group border-border animate-slide-in"
                 style={{ animationDelay: `${index * 100}ms` }}
-                onClick={() => action.title === "New Report" && navigate("/reports")}
+                onClick={action.action}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -105,49 +65,6 @@ const Index = () => {
               </Card>
             ))}
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-foreground">Recent Activity</h3>
-            <Button variant="ghost" size="sm" className="text-primary">
-              View All
-            </Button>
-          </div>
-          <Card className="border-border">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {[
-                  { title: "Commercial Building Inspection - Quote #2024-156", time: "2 hours ago", status: "pending" },
-                  { title: "Residential Property Report - #2024-155", time: "5 hours ago", status: "completed" },
-                  { title: "Industrial Site Assessment - Quote #2024-154", time: "1 day ago", status: "approved" },
-                ].map((item, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-4 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">{item.time}</p>
-                      </div>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      item.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                      item.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    }`}>
-                      {item.status}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>
