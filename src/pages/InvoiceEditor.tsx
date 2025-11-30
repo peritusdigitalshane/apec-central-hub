@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, ArrowLeft, Send } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Send, Download } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import apecLogo from "@/assets/apec-logo.png";
+import html2pdf from "html2pdf.js";
 
 interface Invoice {
   id: string;
@@ -198,6 +199,30 @@ export default function InvoiceEditor() {
     setInvoiceData({ ...invoiceData, signature: undefined });
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('invoice-content');
+    if (!element) return;
+
+    const opt = {
+      margin: 10,
+      filename: `invoice-${invoice?.invoice_number || 'draft'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+      toast({ title: "PDF exported successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Error exporting PDF",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -220,6 +245,10 @@ export default function InvoiceEditor() {
             Back
           </Button>
           <div className="flex gap-2">
+            <Button onClick={exportToPDF} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
             <Button onClick={saveInvoice} disabled={saving} variant="outline" size="sm">
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save
@@ -234,7 +263,7 @@ export default function InvoiceEditor() {
         </div>
 
         {/* Invoice Form */}
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 p-8 rounded-lg shadow-lg border-2 border-amber-200 dark:border-amber-800">
+        <div id="invoice-content" className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 p-8 rounded-lg shadow-lg border-2 border-amber-200 dark:border-amber-800">
           {/* Header */}
           <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-amber-900/20">
             <div className="space-y-3 flex-1">
