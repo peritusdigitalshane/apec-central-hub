@@ -16,6 +16,7 @@ import InvoiceTemplateEditor from "./pages/InvoiceTemplateEditor";
 import UserManagement from "./pages/UserManagement";
 import SuperAdminSettings from "./pages/SuperAdminSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
 
@@ -27,16 +28,16 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-          <Route path="/reports/:id" element={<ProtectedRoute><ReportEditor /></ProtectedRoute>} />
-          <Route path="/templates" element={<ProtectedRoute><ReportTemplates /></ProtectedRoute>} />
-          <Route path="/templates/:id" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
-          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceEditor /></ProtectedRoute>} />
-          <Route path="/invoices/template" element={<ProtectedRoute><InvoiceTemplateEditor /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-          <Route path="/super-admin" element={<ProtectedRoute><SuperAdminSettings /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
+          <Route path="/reports/:id" element={<ProtectedRoute><Layout><ReportEditor /></Layout></ProtectedRoute>} />
+          <Route path="/templates" element={<ProtectedRoute><Layout><ReportTemplates /></Layout></ProtectedRoute>} />
+          <Route path="/templates/:id" element={<ProtectedRoute><Layout><TemplateEditor /></Layout></ProtectedRoute>} />
+          <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute><Layout><InvoiceEditor /></Layout></ProtectedRoute>} />
+          <Route path="/invoices/template" element={<ProtectedRoute><Layout><InvoiceTemplateEditor /></Layout></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute><Layout><UserManagement /></Layout></ProtectedRoute>} />
+          <Route path="/super-admin" element={<ProtectedRoute><Layout><SuperAdminSettings /></Layout></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
