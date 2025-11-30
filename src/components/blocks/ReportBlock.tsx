@@ -10,6 +10,7 @@ import { ImageBlock } from "./ImageBlock";
 import { PhotoUploadBlock } from "./PhotoUploadBlock";
 import { DataTableBlock } from "./DataTableBlock";
 import { NotesBlock } from "./NotesBlock";
+import { InvoiceBlock } from "./InvoiceBlock";
 
 interface Block {
   id: string;
@@ -57,6 +58,8 @@ export function ReportBlock({ block, onUpdate, onDelete, canEdit = true }: Repor
         return <DataTableBlock content={block.content} onUpdate={onUpdate} />;
       case "notes":
         return <NotesBlock content={block.content} onUpdate={onUpdate} />;
+      case "invoice":
+        return <InvoiceBlock content={block.content} onUpdate={onUpdate} />;
       default:
         return <div>Unknown block type: {block.type}</div>;
     }
