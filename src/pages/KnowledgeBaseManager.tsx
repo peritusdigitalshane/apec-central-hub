@@ -345,11 +345,11 @@ export default function KnowledgeBaseManager() {
                     <Input
                       id="file"
                       type="file"
-                      accept=".pdf,.docx,.txt,.md"
+                      accept=".pdf,.docx,.txt,.md,.xlsx,.xls"
                       onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Supported: PDF, DOCX, TXT, MD
+                      Supported: PDF, DOCX, TXT, MD, XLSX, XLS
                     </p>
                   </div>
                   <Button 
