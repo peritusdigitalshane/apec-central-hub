@@ -22,7 +22,7 @@ interface Block {
 interface ReportBlockProps {
   block: Block;
   onUpdate: (content: any) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   canEdit: boolean;
 }
 
@@ -69,7 +69,7 @@ export function ReportBlock({ block, onUpdate, onDelete, canEdit = true }: Repor
     <div ref={setNodeRef} style={style} {...attributes}>
       <Card className="p-4 relative group">
         <div className="flex gap-2">
-          {canEdit && (
+          {canEdit && onDelete && (
             <div
               {...listeners}
               className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 transition-opacity"
@@ -78,7 +78,7 @@ export function ReportBlock({ block, onUpdate, onDelete, canEdit = true }: Repor
             </div>
           )}
           <div className="flex-1">{renderBlockContent()}</div>
-          {canEdit && (
+          {canEdit && onDelete && (
             <Button
               variant="ghost"
               size="icon"

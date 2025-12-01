@@ -35,6 +35,7 @@ interface Report {
   technician: string | null;
   report_number: string | null;
   report_type_id: string | null;
+  template_id: string | null;
   submitted_for_approval: boolean | null;
   approved_by: string | null;
   approved_at: string | null;
@@ -411,6 +412,7 @@ export default function ReportEditor() {
   };
 
   const canEdit = !report?.submitted_for_approval || isAdmin;
+  const canEditStructure = isAdmin && !report?.template_id; // Only admins can edit structure, and only for non-template reports
   
   if (loading || !report) {
     return (
@@ -672,10 +674,15 @@ export default function ReportEditor() {
           <div className="border-t pt-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Report Content</h2>
-              {canEdit && <BlockTypeSelector onSelect={addBlock} />}
+              {canEditStructure && <BlockTypeSelector onSelect={addBlock} />}
             </div>
+            {!canEditStructure && report.template_id && (
+              <p className="text-sm text-muted-foreground mb-4">
+                This report structure is based on a template. You can edit the content within each section.
+              </p>
+            )}
 
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext collisionDetection={closestCenter} onDragEnd={canEditStructure ? handleDragEnd : undefined}>
             <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-4">
                 {blocks.map((block) => (
@@ -683,7 +690,7 @@ export default function ReportEditor() {
                     key={block.id}
                     block={block}
                     onUpdate={(content) => updateBlock(block.id, content)}
-                    onDelete={() => deleteBlock(block.id)}
+                    onDelete={canEditStructure ? () => deleteBlock(block.id) : undefined}
                     canEdit={canEdit}
                   />
                 ))}
