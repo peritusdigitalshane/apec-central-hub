@@ -22,7 +22,7 @@ interface UserWithRole {
   id: string;
   email: string;
   full_name: string;
-  role: string;
+  role: string | null;
   created_at: string;
 }
 
@@ -70,7 +70,7 @@ export default function UserManagement() {
           id: profile.user_id,
           email: profile.email,
           full_name: profile.full_name || "No name",
-          role: userRole?.role || "staff",
+          role: userRole?.role || null, // null means inactive
           created_at: profile.created_at,
         };
       });
@@ -84,13 +84,24 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: "super_admin" | "admin" | "staff") => {
+  const updateUserRole = async (userId: string, newRole: "super_admin" | "admin" | "staff" | null) => {
     try {
-      const { error } = await supabase
-        .from("user_roles")
-        .upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
+      if (newRole === null) {
+        // Remove role to make user inactive
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId);
+        
+        if (error) throw error;
+      } else {
+        // Upsert role
+        const { error } = await supabase
+          .from("user_roles")
+          .upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
       
       toast.success("User role updated");
       loadUsers();
@@ -99,7 +110,7 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleBadge = (role: string) => {
+  const getRoleBadge = (role: string | null) => {
     switch (role) {
       case "super_admin":
         return <Badge className="gap-1"><Crown className="h-3 w-3" />Super Admin</Badge>;
@@ -112,9 +123,9 @@ export default function UserManagement() {
     }
   };
 
-  const canEditRole = (userRole: string) => {
+  const canEditRole = (userRole: string | null) => {
     if (isSuperAdmin) return true;
-    if (isAdmin && userRole === "staff") return true;
+    if (isAdmin && (userRole === "staff" || userRole === null)) return true;
     return false;
   };
 
@@ -272,13 +283,14 @@ export default function UserManagement() {
                     {getRoleBadge(user.role)}
                     {canEditRole(user.role) ? (
                       <Select
-                        value={user.role}
-                        onValueChange={(value) => updateUserRole(user.id, value as "super_admin" | "admin" | "staff")}
+                        value={user.role || "inactive"}
+                        onValueChange={(value) => updateUserRole(user.id, value === "inactive" ? null : value as "super_admin" | "admin" | "staff")}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="inactive">Inactive</SelectItem>
                           {isSuperAdmin && (
                             <SelectItem value="super_admin">Super Admin</SelectItem>
                           )}

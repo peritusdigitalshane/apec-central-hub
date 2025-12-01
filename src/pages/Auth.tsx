@@ -28,14 +28,17 @@ export default function Auth() {
         if (error) throw error;
         toast.success("Welcome back!");
         navigate("/");
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        toast.success("Account created! Please check your email to verify.");
-      }
+        } else {
+          const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`
+            }
+          });
+          if (error) throw error;
+          toast.success("Account created! Your account is inactive until an admin assigns you a role.");
+        }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {
