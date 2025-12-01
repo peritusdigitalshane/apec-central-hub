@@ -266,6 +266,208 @@ export default function Reports() {
     }
   };
 
+  const createDefaultTemplate = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Create the Default template
+      const { data: template, error: templateError } = await supabase
+        .from("report_templates")
+        .insert([{
+          created_by: user.id,
+          title: "Default NDT Inspection Report",
+          description: "Standard NDT inspection report template - replaces Excel forms",
+          status: "published",
+          category: "NDT Inspection"
+        }])
+        .select()
+        .single();
+
+      if (templateError) throw templateError;
+
+      // Create comprehensive NDT report structure matching Excel forms
+      const blocks = [
+        // Header Section
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "NDT INSPECTION REPORT", level: "h1" },
+          order_index: 0
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Report Number:\nJob/Work Order Number:\nClient/Company:\nPart Description:" },
+          order_index: 1
+        },
+        
+        // Test Details
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Test Information", level: "h2" },
+          order_index: 2
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Test Date:\nTest Method (MT/PT/UT/RT):\nTest Standard/Procedure:\nAcceptance Criteria:\nSurface Condition:" },
+          order_index: 3
+        },
+
+        // Part/Component Details
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Component/Part Details", level: "h2" },
+          order_index: 4
+        },
+        {
+          template_id: template.id,
+          type: "data-table",
+          content: {
+            headers: ["Item No.", "Part Number", "Description", "Quantity", "Serial/ID"],
+            rows: [
+              ["1", "", "", "", ""],
+              ["2", "", "", "", ""],
+              ["3", "", "", "", ""],
+              ["4", "", "", "", ""],
+              ["5", "", "", "", ""]
+            ]
+          },
+          order_index: 5
+        },
+
+        // Equipment & Materials
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Equipment & Materials Used", level: "h2" },
+          order_index: 6
+        },
+        {
+          template_id: template.id,
+          type: "data-table",
+          content: {
+            headers: ["Equipment/Material", "Model/Type", "Serial No.", "Calibration Due"],
+            rows: [
+              ["", "", "", ""],
+              ["", "", "", ""],
+              ["", "", "", ""]
+            ]
+          },
+          order_index: 7
+        },
+
+        // Test Results
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Inspection Results", level: "h2" },
+          order_index: 8
+        },
+        {
+          template_id: template.id,
+          type: "data-table",
+          content: {
+            headers: ["Item", "Test Area/Location", "Findings/Indications", "Size/Extent", "Result (Pass/Fail)", "Remarks"],
+            rows: [
+              ["1", "", "", "", "", ""],
+              ["2", "", "", "", "", ""],
+              ["3", "", "", "", "", ""],
+              ["4", "", "", "", "", ""],
+              ["5", "", "", "", "", ""]
+            ]
+          },
+          order_index: 9
+        },
+
+        // Photos
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Photographic Evidence", level: "h2" },
+          order_index: 10
+        },
+        {
+          template_id: template.id,
+          type: "photo-upload",
+          content: { photos: [] },
+          order_index: 11
+        },
+
+        // Observations/Notes
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Additional Observations", level: "h2" },
+          order_index: 12
+        },
+        {
+          template_id: template.id,
+          type: "notes",
+          content: { text: "" },
+          order_index: 13
+        },
+
+        // Summary/Conclusion
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Summary & Recommendations", level: "h2" },
+          order_index: 14
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Overall Result: ☐ ACCEPT  ☐ REJECT  ☐ ACCEPT WITH REPAIR\n\nSummary:\n\nRecommendations:" },
+          order_index: 15
+        },
+
+        // Certification
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Inspector Certification", level: "h2" },
+          order_index: 16
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Inspector Name:\nQualification/Certification Level:\nCertificate Number:\nSignature:\nDate:" },
+          order_index: 17
+        },
+
+        // Review (if applicable)
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Review & Approval", level: "h2" },
+          order_index: 18
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Reviewed By:\nPosition:\nSignature:\nDate:" },
+          order_index: 19
+        }
+      ];
+
+      const { error: blocksError } = await supabase
+        .from("template_blocks")
+        .insert(blocks);
+
+      if (blocksError) throw blocksError;
+
+      toast.success("Default NDT Inspection Report template created!");
+      loadTemplates();
+    } catch (error: any) {
+      console.error("Error creating default template:", error);
+      toast.error("Failed to create default template");
+    }
+  };
+
   const deleteTemplate = async (id: string) => {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
@@ -551,7 +753,11 @@ export default function Reports() {
           {/* Templates Tab */}
           <TabsContent value="templates">
             {isAdmin && (
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button onClick={createDefaultTemplate} variant="secondary" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Create Default Template
+                </Button>
                 <Button onClick={createTemplate} className="gap-2">
                   <Plus className="h-4 w-4" />
                   New Template
