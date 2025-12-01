@@ -65,6 +65,9 @@ export default function ReportEditor() {
   const [submitting, setSubmitting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewData, setReviewData] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -216,6 +219,33 @@ export default function ReportEditor() {
       toast.error(error.message || "Failed to generate report with AI");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const reviewReport = async () => {
+    if (!report || !id) return;
+    setReviewing(true);
+    setReviewData(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("review-report", {
+        body: { reportId: id },
+      });
+
+      if (error) throw error;
+
+      if (data?.review) {
+        setReviewData(data.review);
+        setReviewDialogOpen(true);
+        toast.success("Report review completed!");
+      } else {
+        toast.error("No review data received");
+      }
+    } catch (error: any) {
+      console.error("AI review error:", error);
+      toast.error(error.message || "Failed to review report with AI");
+    } finally {
+      setReviewing(false);
     }
   };
 
@@ -449,6 +479,15 @@ export default function ReportEditor() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                <Button 
+                  onClick={reviewReport} 
+                  disabled={reviewing || blocks.length === 0} 
+                  variant="outline" 
+                  className="gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {reviewing ? "Reviewing..." : "AI Review"}
+                </Button>
                 <Button onClick={saveReport} disabled={saving} variant="outline" className="gap-2">
                   <Save className="h-4 w-4" />
                   {saving ? "Saving..." : "Save"}
@@ -659,6 +698,96 @@ export default function ReportEditor() {
             </div>
           )}
         </div>
+
+        {/* AI Review Results Dialog */}
+        <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>AI Report Review Results</DialogTitle>
+            </DialogHeader>
+            {reviewData && (
+              <div className="space-y-6">
+                {/* Quality Score */}
+                <div className="flex items-center gap-4 p-4 bg-primary/10 rounded-lg">
+                  <div className="text-4xl font-bold text-primary">
+                    {reviewData.qualityScore}/10
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Quality Score</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Based on completeness, professionalism, and alignment
+                    </p>
+                  </div>
+                </div>
+
+                {/* Overall Feedback */}
+                {reviewData.overallFeedback && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Overall Feedback</h3>
+                    <p className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
+                      {reviewData.overallFeedback}
+                    </p>
+                  </div>
+                )}
+
+                {/* Completeness Issues */}
+                {reviewData.completenessIssues && reviewData.completenessIssues.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-orange-600">
+                      Completeness Issues ({reviewData.completenessIssues.length})
+                    </h3>
+                    <ul className="space-y-2">
+                      {reviewData.completenessIssues.map((issue: string, idx: number) => (
+                        <li key={idx} className="text-sm p-3 bg-orange-50 dark:bg-orange-950/20 rounded border-l-4 border-orange-500">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Consistency Issues */}
+                {reviewData.consistencyIssues && reviewData.consistencyIssues.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-yellow-600">
+                      Consistency Issues ({reviewData.consistencyIssues.length})
+                    </h3>
+                    <ul className="space-y-2">
+                      {reviewData.consistencyIssues.map((issue: string, idx: number) => (
+                        <li key={idx} className="text-sm p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded border-l-4 border-yellow-500">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Enhancement Suggestions */}
+                {reviewData.enhancements && reviewData.enhancements.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-blue-600">
+                      Enhancement Suggestions ({reviewData.enhancements.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {reviewData.enhancements.map((enhancement: any, idx: number) => (
+                        <div key={idx} className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded border-l-4 border-blue-500">
+                          <h4 className="font-semibold mb-2">{enhancement.section}</h4>
+                          <p className="text-sm mb-2">{enhancement.suggestion}</p>
+                          {enhancement.revisedContent && (
+                            <div className="mt-3 p-3 bg-background rounded">
+                              <p className="text-xs font-semibold mb-1 text-muted-foreground">Suggested Revision:</p>
+                              <p className="text-sm whitespace-pre-wrap">{enhancement.revisedContent}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
