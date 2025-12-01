@@ -67,6 +67,147 @@ export default function ReportTemplates() {
     }
   };
 
+  const createDefaultTemplate = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Create the Default template
+      const { data: template, error: templateError } = await supabase
+        .from("report_templates")
+        .insert([{
+          created_by: user.id,
+          title: "Default NDT Report",
+          description: "Standard Non-Destructive Testing report template with all essential sections",
+          status: "published",
+          category: "NDT"
+        }])
+        .select()
+        .single();
+
+      if (templateError) throw templateError;
+
+      // Create template blocks based on typical NDT report structure
+      const blocks = [
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Report Information", level: "h2" },
+          order_index: 0
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Report Number:\nInspection Date:\nJob Number:\nClient Name:\nLocation:" },
+          order_index: 1
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Test Method & Standards", level: "h2" },
+          order_index: 2
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Test Method:\nApplicable Standards:\nAcceptance Criteria:" },
+          order_index: 3
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Equipment Used", level: "h2" },
+          order_index: 4
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Equipment Description:\nSerial Numbers:\nCalibration Status:" },
+          order_index: 5
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Test Results", level: "h2" },
+          order_index: 6
+        },
+        {
+          template_id: template.id,
+          type: "data-table",
+          content: {
+            headers: ["Item", "Description", "Test Area", "Result", "Remarks"],
+            rows: [
+              ["1", "", "", "", ""],
+              ["2", "", "", "", ""],
+              ["3", "", "", "", ""]
+            ]
+          },
+          order_index: 7
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Photo Documentation", level: "h2" },
+          order_index: 8
+        },
+        {
+          template_id: template.id,
+          type: "photo-upload",
+          content: { photos: [] },
+          order_index: 9
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Observations", level: "h2" },
+          order_index: 10
+        },
+        {
+          template_id: template.id,
+          type: "notes",
+          content: { text: "" },
+          order_index: 11
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Conclusions & Recommendations", level: "h2" },
+          order_index: 12
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "" },
+          order_index: 13
+        },
+        {
+          template_id: template.id,
+          type: "heading",
+          content: { text: "Certification", level: "h2" },
+          order_index: 14
+        },
+        {
+          template_id: template.id,
+          type: "text",
+          content: { text: "Technician Name:\nQualification:\nSignature:\nDate:" },
+          order_index: 15
+        }
+      ];
+
+      const { error: blocksError } = await supabase
+        .from("template_blocks")
+        .insert(blocks);
+
+      if (blocksError) throw blocksError;
+
+      toast.success("Default NDT Report template created successfully!");
+      loadTemplates();
+    } catch (error: any) {
+      console.error("Error creating default template:", error);
+      toast.error("Failed to create default template");
+    }
+  };
+
   const deleteTemplate = async (id: string) => {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
@@ -177,10 +318,16 @@ export default function ReportTemplates() {
           </div>
           <div className="flex items-center gap-4">
             {isAdmin && (
-              <Button onClick={createTemplate} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Template
-              </Button>
+              <>
+                <Button onClick={createDefaultTemplate} variant="secondary" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Create Default Template
+                </Button>
+                <Button onClick={createTemplate} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Template
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => navigate("/reports")}>
               My Reports
