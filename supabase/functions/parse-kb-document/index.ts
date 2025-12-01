@@ -52,6 +52,54 @@ serve(async (req) => {
     // Extract content based on file type
     if (fileType === 'txt' || fileType === 'md') {
       extractedContent = await fileData.text();
+    } else if (fileType === 'xlsx' || fileType === 'xls') {
+      // For Excel files, extract text from cells
+      try {
+        const arrayBuffer = await fileData.arrayBuffer();
+        const text = new TextDecoder().decode(arrayBuffer);
+        
+        // Excel (.xlsx) files are ZIP archives containing XML
+        // Extract text from shared strings and worksheet data
+        const sharedStrings: string[] = [];
+        const sheetData: string[] = [];
+        
+        // Extract shared strings (common text values)
+        const sharedStringsMatch = text.match(/<sst[^>]*>[\s\S]*?<\/sst>/);
+        if (sharedStringsMatch) {
+          const matches = sharedStringsMatch[0].match(/<t[^>]*>([^<]+)<\/t>/g);
+          if (matches) {
+            sharedStrings.push(...matches.map(m => m.replace(/<t[^>]*>|<\/t>/g, '')));
+          }
+        }
+        
+        // Extract inline cell values
+        const cellMatches = text.match(/<v>([^<]+)<\/v>/g);
+        if (cellMatches) {
+          sheetData.push(...cellMatches.map(m => m.replace(/<v>|<\/v>/g, '')));
+        }
+        
+        // Extract inline string values
+        const inlineStrings = text.match(/<is>[\s\S]*?<t[^>]*>([^<]+)<\/t>[\s\S]*?<\/is>/g);
+        if (inlineStrings) {
+          inlineStrings.forEach(match => {
+            const textMatch = match.match(/<t[^>]*>([^<]+)<\/t>/);
+            if (textMatch) {
+              sheetData.push(textMatch[1]);
+            }
+          });
+        }
+        
+        // Combine all extracted content
+        const allContent = [...sharedStrings, ...sheetData].filter(Boolean);
+        if (allContent.length > 0) {
+          extractedContent = allContent.join(' ');
+        } else {
+          extractedContent = `Excel document: ${fileName}. Please note: Complex Excel files may require manual content extraction.`;
+        }
+      } catch (error) {
+        console.error('Excel extraction error:', error);
+        extractedContent = `Excel document: ${fileName}. Automatic text extraction failed.`;
+      }
     } else if (fileType === 'pdf') {
       // For PDF files, use a simple text extraction approach
       // In production, you might want to use a dedicated PDF parsing library
@@ -89,7 +137,7 @@ serve(async (req) => {
         extractedContent = `DOCX document: ${fileName}. Automatic text extraction failed.`;
       }
     } else {
-      extractedContent = `Document: ${fileName}. File type ${fileType} not supported for automatic text extraction.`;
+      extractedContent = `Document: ${fileName}. File type ${fileType} not supported for automatic text extraction. Supported formats: TXT, MD, PDF, DOCX, XLSX, XLS.`;
     }
 
     // Clean up the extracted content
