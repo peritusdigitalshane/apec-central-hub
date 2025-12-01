@@ -271,6 +271,25 @@ export default function Reports() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Check if Default template already exists and delete it
+      const { data: existingTemplates } = await supabase
+        .from("report_templates")
+        .select("id")
+        .eq("title", "Default NDT Inspection Report");
+
+      if (existingTemplates && existingTemplates.length > 0) {
+        // Delete existing Default templates (including broken ones)
+        const { error: deleteError } = await supabase
+          .from("report_templates")
+          .delete()
+          .eq("title", "Default NDT Inspection Report");
+        
+        if (deleteError) {
+          console.error("Error deleting existing templates:", deleteError);
+        }
+        toast("Replacing existing Default template...");
+      }
+
       // Create the Default template
       const { data: template, error: templateError } = await supabase
         .from("report_templates")
@@ -458,7 +477,10 @@ export default function Reports() {
         .from("template_blocks")
         .insert(blocks);
 
-      if (blocksError) throw blocksError;
+      if (blocksError) {
+        console.error("Block insertion error:", blocksError);
+        throw new Error(`Failed to insert template blocks: ${blocksError.message}`);
+      }
 
       toast.success("Default NDT Inspection Report template created!");
       loadTemplates();
