@@ -473,17 +473,31 @@ export default function Reports() {
         }
       ];
 
-      const { error: blocksError } = await supabase
+      console.log("Creating template blocks for template:", template.id);
+      console.log("Number of blocks to create:", blocks.length);
+
+      const { data: insertedBlocks, error: blocksError } = await supabase
         .from("template_blocks")
-        .insert(blocks);
+        .insert(blocks)
+        .select();
+
+      console.log("Inserted blocks:", insertedBlocks);
+      console.log("Blocks error:", blocksError);
 
       if (blocksError) {
         console.error("Block insertion error:", blocksError);
         throw new Error(`Failed to insert template blocks: ${blocksError.message}`);
       }
 
+      if (!insertedBlocks || insertedBlocks.length === 0) {
+        throw new Error("No blocks were inserted - RLS policy may be blocking");
+      }
+
+      console.log(`Successfully created ${insertedBlocks.length} blocks`);
+
       toast.success("Default NDT Inspection Report template created!");
-      loadTemplates();
+      console.log("Template creation complete, reloading templates...");
+      await loadTemplates();
     } catch (error: any) {
       console.error("Error creating default template:", error);
       toast.error("Failed to create default template");
