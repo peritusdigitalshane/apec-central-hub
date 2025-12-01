@@ -162,15 +162,35 @@ export default function KnowledgeBaseManager() {
 
       if (uploadError) throw uploadError;
 
-      // Extract content based on file type
+      // Extract content using edge function
       let content = "";
-      const fileType = uploadFile.type;
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: parseData, error: parseError } = await supabase.functions.invoke(
+          'parse-kb-document',
+          {
+            body: {
+              filePath,
+              reportTypeId: selectedReportType,
+              fileName: uploadFile.name,
+              fileType: fileExt,
+            },
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          }
+        );
 
-      if (fileType.includes("text") || fileType.includes("markdown")) {
-        content = await uploadFile.text();
-      } else {
-        // For PDF/DOCX, we'll store a placeholder and process later
-        content = `Document uploaded: ${uploadFile.name}. Content extraction may be required.`;
+        if (parseError) {
+          console.error('Parse error:', parseError);
+          content = `Document uploaded: ${uploadFile.name}. Content extraction failed.`;
+        } else {
+          content = parseData.content || `Document uploaded: ${uploadFile.name}`;
+        }
+      } catch (parseErr) {
+        console.error('Content extraction error:', parseErr);
+        content = `Document uploaded: ${uploadFile.name}. Content extraction failed.`;
       }
 
       // Save document metadata
