@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ interface KBDocument {
 }
 
 export default function KnowledgeBaseManager() {
-  const { isAdmin } = useUserRole();
+  const { isAdmin } = useAuth();
   const [reportTypes, setReportTypes] = useState<ReportType[]>([]);
   const [kbDocuments, setKBDocuments] = useState<KBDocument[]>([]);
   const [loading, setLoading] = useState(true);

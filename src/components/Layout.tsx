@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/apec-logo.png";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, isSuperAdmin, isAdmin } = useUserRole();
+  const { isSuperAdmin, isAdmin } = useAuth();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
