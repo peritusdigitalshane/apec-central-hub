@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2, Copy, Edit, CheckCircle, XCircle } from "lucide-react";
+import { Plus, FileText, Trash2, Copy, Edit, CheckCircle, XCircle, FolderTree } from "lucide-react";
+import CompanyReports from "@/components/reports/CompanyReports";
 
 interface Report {
   id: string;
@@ -117,7 +118,6 @@ export default function Reports() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get the original report
       const { data: originalReport, error: reportError } = await supabase
         .from("reports")
         .select("*")
@@ -126,7 +126,6 @@ export default function Reports() {
 
       if (reportError) throw reportError;
 
-      // Create new report with same metadata but reset status
       const { data: newReport, error: newReportError } = await supabase
         .from("reports")
         .insert({
@@ -138,9 +137,9 @@ export default function Reports() {
           location: originalReport.location,
           order_number: originalReport.order_number,
           technician: originalReport.technician,
-          report_number: null, // Clear report number for new report
+          report_number: null,
           subject: originalReport.subject,
-          inspection_date: null, // Clear inspection date
+          inspection_date: null,
           template_id: originalReport.template_id,
           status: "draft",
           submitted_for_approval: false,
@@ -150,7 +149,6 @@ export default function Reports() {
 
       if (newReportError) throw newReportError;
 
-      // Get all blocks from the original report
       const { data: originalBlocks, error: blocksError } = await supabase
         .from("report_blocks")
         .select("*")
@@ -159,7 +157,6 @@ export default function Reports() {
 
       if (blocksError) throw blocksError;
 
-      // Copy blocks to new report
       if (originalBlocks && originalBlocks.length > 0) {
         const newBlocks = originalBlocks.map((block) => ({
           report_id: newReport.id,
@@ -219,6 +216,7 @@ export default function Reports() {
       if (error) throw error;
       toast.success("Report approved");
       loadPendingReports();
+      loadReports();
     } catch (error: any) {
       toast.error("Failed to approve report");
     }
@@ -239,6 +237,7 @@ export default function Reports() {
       if (error) throw error;
       toast.success("Report rejected and sent back for revision");
       loadPendingReports();
+      loadReports();
     } catch (error: any) {
       toast.error("Failed to reject report");
     }
@@ -272,26 +271,21 @@ export default function Reports() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check if Default template already exists and delete it
       const { data: existingTemplates } = await supabase
         .from("report_templates")
         .select("id")
         .eq("title", "Default NDT Inspection Report");
 
       if (existingTemplates && existingTemplates.length > 0) {
-        // Delete existing Default templates (including broken ones)
         const { error: deleteError } = await supabase
           .from("report_templates")
           .delete()
           .eq("title", "Default NDT Inspection Report");
         
-        if (deleteError) {
-          console.error("Error deleting existing templates:", deleteError);
-        }
+        if (deleteError) console.error("Error deleting existing templates:", deleteError);
         toast("Replacing existing Default template...");
       }
 
-      // Create the Default template
       const { data: template, error: templateError } = await supabase
         .from("report_templates")
         .insert([{
@@ -306,34 +300,17 @@ export default function Reports() {
 
       if (templateError) throw templateError;
 
-      // Create comprehensive NDT report structure matching Excel forms
       const blocks = createDefaultNdtTemplateBlocks(template.id);
-
-
-      console.log("Creating template blocks for template:", template.id);
-      console.log("Number of blocks to create:", blocks.length);
 
       const { data: insertedBlocks, error: blocksError } = await supabase
         .from("template_blocks")
         .insert(blocks)
         .select();
 
-      console.log("Inserted blocks:", insertedBlocks);
-      console.log("Blocks error:", blocksError);
-
-      if (blocksError) {
-        console.error("Block insertion error:", blocksError);
-        throw new Error(`Failed to insert template blocks: ${blocksError.message}`);
-      }
-
-      if (!insertedBlocks || insertedBlocks.length === 0) {
-        throw new Error("No blocks were inserted - RLS policy may be blocking");
-      }
-
-      console.log(`Successfully created ${insertedBlocks.length} blocks`);
+      if (blocksError) throw new Error(`Failed to insert template blocks: ${blocksError.message}`);
+      if (!insertedBlocks || insertedBlocks.length === 0) throw new Error("No blocks were inserted");
 
       toast.success("Default NDT Inspection Report template created!");
-      console.log("Template creation complete, reloading templates...");
       await loadTemplates();
     } catch (error: any) {
       console.error("Error creating default template:", error);
@@ -363,7 +340,6 @@ export default function Reports() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Load template data
       const { data: template, error: templateError } = await supabase
         .from("report_templates")
         .select("*")
@@ -372,7 +348,6 @@ export default function Reports() {
 
       if (templateError) throw templateError;
 
-      // Load template blocks
       const { data: templateBlocks, error: blocksError } = await supabase
         .from("template_blocks")
         .select("*")
@@ -381,7 +356,6 @@ export default function Reports() {
 
       if (blocksError) throw blocksError;
 
-      // Create new report from template
       const { data: newReport, error: reportError } = await supabase
         .from("reports")
         .insert([{
@@ -400,7 +374,6 @@ export default function Reports() {
 
       if (reportError) throw reportError;
 
-      // Copy blocks to new report
       if (templateBlocks && templateBlocks.length > 0) {
         const blocks = templateBlocks.map(block => ({
           report_id: newReport.id,
@@ -425,6 +398,7 @@ export default function Reports() {
 
   const publishedTemplates = templates.filter(t => t.status === 'published');
   const draftTemplates = templates.filter(t => t.status === 'draft');
+  const myDraftReports = reports.filter(r => r.status === 'draft' || r.submitted_for_approval);
 
   if (roleLoading || loading) {
     return (
@@ -440,27 +414,163 @@ export default function Reports() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold">Reports</h2>
-            <p className="text-muted-foreground mt-1">Create and manage inspection reports</p>
+            <p className="text-muted-foreground mt-1">Create, manage, and review inspection reports</p>
           </div>
         </div>
 
-        <Tabs defaultValue="my-reports" className="w-full">
-          <TabsList className={`grid w-full max-w-2xl mb-6 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <TabsTrigger value="my-reports">My Reports</TabsTrigger>
-            {isAdmin && <TabsTrigger value="pending-approval">Pending Approval</TabsTrigger>}
-            <TabsTrigger value="templates">Templates</TabsTrigger>
+        <Tabs defaultValue="templates" className="w-full">
+          <TabsList className={`grid w-full max-w-3xl mb-6 ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsTrigger value="templates" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Templates
+            </TabsTrigger>
+            <TabsTrigger value="my-reports" className="gap-2">
+              <Edit className="h-4 w-4" />
+              My Reports
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="pending-approval" className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Pending Approval
+                {pendingReports.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {pendingReports.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="company-reports" className="gap-2">
+              <FolderTree className="h-4 w-4" />
+              Company Reports
+            </TabsTrigger>
           </TabsList>
 
-          {/* My Reports Tab */}
-          <TabsContent value="my-reports">
+          {/* ============ TEMPLATES TAB ============ */}
+          <TabsContent value="templates">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-1">Report Templates</h3>
+              <p className="text-sm text-muted-foreground">
+                Select a template to create a new report. The report will start as a draft.
+              </p>
+            </div>
+
             {isAdmin && (
-              <div className="flex justify-end mb-4">
-                <Button onClick={createReport} className="gap-2">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button onClick={createDefaultTemplate} variant="secondary" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Create Default Template
+                </Button>
+                <Button onClick={createTemplate} className="gap-2">
                   <Plus className="h-4 w-4" />
-                  New Report
+                  New Template
                 </Button>
               </div>
             )}
+
+            {publishedTemplates.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No templates available</h3>
+                  <p className="text-muted-foreground">
+                    {isAdmin ? "Create and publish templates for your team" : "Check back later for templates"}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {publishedTemplates.map((template) => (
+                  <Card key={template.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{template.title}</CardTitle>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                      )}
+                      {template.category && (
+                        <Badge variant="outline" className="mt-2 w-fit">{template.category}</Badge>
+                      )}
+                    </CardHeader>
+                    <CardContent className="flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 gap-2"
+                        onClick={() => useTemplate(template.id)}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Use Template
+                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/templates/${template.id}`)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => deleteTemplate(template.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Draft templates for admins */}
+            {isAdmin && draftTemplates.length > 0 && (
+              <div className="mt-8">
+                <h4 className="text-md font-semibold mb-3 text-muted-foreground">Draft Templates</h4>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {draftTemplates.map((template) => (
+                    <Card
+                      key={template.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer opacity-75 hover:opacity-100"
+                      onClick={() => navigate(`/templates/${template.id}`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              {template.title}
+                              <Badge variant="secondary">Draft</Badge>
+                            </CardTitle>
+                            {template.description && (
+                              <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => { e.stopPropagation(); deleteTemplate(template.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ============ MY REPORTS TAB ============ */}
+          <TabsContent value="my-reports">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">My Reports</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your draft and in-progress reports. Submit for approval when ready.
+                </p>
+              </div>
+              {isAdmin && (
+                <Button onClick={createReport} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Blank Report
+                </Button>
+              )}
+            </div>
 
             {reports.length === 0 ? (
               <Card className="text-center py-12">
@@ -468,21 +578,8 @@ export default function Reports() {
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No reports yet</h3>
                   <p className="text-muted-foreground mb-6">
-                    {isAdmin 
-                      ? "Get started by creating your first inspection report" 
-                      : "Select a template from the Templates tab to create your first report"}
+                    Go to Templates to create your first report
                   </p>
-                  {isAdmin ? (
-                    <Button onClick={createReport} className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Create Report
-                    </Button>
-                  ) : (
-                    <Button onClick={() => document.querySelector('[value="templates"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))} className="gap-2">
-                      <FileText className="h-4 w-4" />
-                      Browse Templates
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -501,6 +598,9 @@ export default function Reports() {
                             {report.submitted_for_approval && (
                               <Badge variant="secondary">Pending Approval</Badge>
                             )}
+                            {report.status === "completed" && (
+                              <Badge variant="outline" className="border-primary text-primary">Approved</Badge>
+                            )}
                           </CardTitle>
                           <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                             {report.job_number && <p>Job #: {report.job_number}</p>}
@@ -517,10 +617,7 @@ export default function Reports() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cloneReport(report.id);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); cloneReport(report.id); }}
                             title="Clone report"
                           >
                             <Copy className="h-4 w-4" />
@@ -529,10 +626,7 @@ export default function Reports() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteReport(report.id);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); deleteReport(report.id); }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -545,16 +639,23 @@ export default function Reports() {
             )}
           </TabsContent>
 
-          {/* Pending Approval Tab */}
+          {/* ============ PENDING APPROVAL TAB ============ */}
           {isAdmin && (
             <TabsContent value="pending-approval">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-1">Pending Approval</h3>
+                <p className="text-sm text-muted-foreground">
+                  Reports submitted by staff for your review. Approve to move them to Company Reports.
+                </p>
+              </div>
+
               {pendingReports.length === 0 ? (
                 <Card className="text-center py-12">
                   <CardContent>
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No reports pending approval</h3>
+                    <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">All caught up!</h3>
                     <p className="text-muted-foreground">
-                      Reports submitted by staff will appear here for review
+                      No reports pending approval
                     </p>
                   </CardContent>
                 </Card>
@@ -563,24 +664,20 @@ export default function Reports() {
                   {pendingReports.map((report) => (
                     <Card key={report.id} className="hover:shadow-lg transition-shadow">
                       <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              {report.title}
-                              <Badge variant="secondary">Pending</Badge>
-                            </CardTitle>
-                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                              {report.job_number && <p>Job #: {report.job_number}</p>}
-                              {report.client_name && <p>Client: {report.client_name}</p>}
-                              {report.location && <p>Location: {report.location}</p>}
-                              {report.inspection_date && (
-                                <p>Date: {new Date(report.inspection_date).toLocaleDateString()}</p>
-                              )}
-                              <p className="text-xs mt-2">
-                                Submitted: {new Date(report.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {report.title}
+                          <Badge variant="secondary">Pending</Badge>
+                        </CardTitle>
+                        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                          {report.job_number && <p>Job #: {report.job_number}</p>}
+                          {report.client_name && <p>Client: {report.client_name}</p>}
+                          {report.location && <p>Location: {report.location}</p>}
+                          {report.inspection_date && (
+                            <p>Date: {new Date(report.inspection_date).toLocaleDateString()}</p>
+                          )}
+                          <p className="text-xs mt-2">
+                            Submitted: {new Date(report.created_at).toLocaleDateString()}
+                          </p>
                         </div>
                       </CardHeader>
                       <CardContent className="flex gap-2">
@@ -597,10 +694,7 @@ export default function Reports() {
                           variant="outline"
                           size="sm"
                           className="gap-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            approveReport(report.id);
-                          }}
+                          onClick={() => approveReport(report.id)}
                         >
                           <CheckCircle className="h-4 w-4" />
                         </Button>
@@ -608,10 +702,7 @@ export default function Reports() {
                           variant="outline"
                           size="sm"
                           className="gap-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            rejectReport(report.id);
-                          }}
+                          onClick={() => rejectReport(report.id)}
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -623,148 +714,15 @@ export default function Reports() {
             </TabsContent>
           )}
 
-          {/* Templates Tab */}
-          <TabsContent value="templates">
-            {isAdmin && (
-              <div className="flex justify-end gap-2 mb-4">
-                <Button onClick={createDefaultTemplate} variant="secondary" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Create Default Template
-                </Button>
-                <Button onClick={createTemplate} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Template
-                </Button>
-              </div>
-            )}
-
-            <Tabs defaultValue="published" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-                <TabsTrigger value="published">Published</TabsTrigger>
-                {isAdmin && <TabsTrigger value="drafts">Drafts</TabsTrigger>}
-              </TabsList>
-
-              <TabsContent value="published">
-                {publishedTemplates.length === 0 ? (
-                  <Card className="text-center py-12">
-                    <CardContent>
-                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">No published templates yet</h3>
-                      <p className="text-muted-foreground">
-                        {isAdmin ? "Create and publish templates for your team to use" : "Check back later for templates"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {publishedTemplates.map((template) => (
-                      <Card key={template.id} className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-lg">{template.title}</CardTitle>
-                              {template.description && (
-                                <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
-                              )}
-                              {template.category && (
-                                <Badge variant="outline" className="mt-2">{template.category}</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="flex gap-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="flex-1 gap-2"
-                            onClick={() => useTemplate(template.id)}
-                          >
-                            <FileText className="h-4 w-4" />
-                            Use Template
-                          </Button>
-                          {isAdmin && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/templates/${template.id}`)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteTemplate(template.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {isAdmin && (
-                <TabsContent value="drafts">
-                  {draftTemplates.length === 0 ? (
-                    <Card className="text-center py-12">
-                      <CardContent>
-                        <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-xl font-semibold mb-2">No draft templates</h3>
-                        <p className="text-muted-foreground mb-6">
-                          Create a new template to get started
-                        </p>
-                        <Button onClick={createTemplate} className="gap-2">
-                          <Plus className="h-4 w-4" />
-                          Create Template
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {draftTemplates.map((template) => (
-                        <Card
-                          key={template.id}
-                          className="hover:shadow-lg transition-shadow cursor-pointer"
-                          onClick={() => navigate(`/templates/${template.id}`)}
-                        >
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                  {template.title}
-                                  <Badge variant="secondary">Draft</Badge>
-                                </CardTitle>
-                                {template.description && (
-                                  <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
-                                )}
-                                {template.category && (
-                                  <Badge variant="outline" className="mt-2">{template.category}</Badge>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteTemplate(template.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardHeader>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              )}
-            </Tabs>
+          {/* ============ COMPANY REPORTS TAB ============ */}
+          <TabsContent value="company-reports">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-1">Company Reports</h3>
+              <p className="text-sm text-muted-foreground">
+                Approved reports organized by company. Browse completed work.
+              </p>
+            </div>
+            <CompanyReports />
           </TabsContent>
         </Tabs>
       </div>
