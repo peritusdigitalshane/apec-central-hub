@@ -496,7 +496,7 @@ export default function ReportEditor() {
                 </Button>
               </>
             )}
-            {!report.submitted_for_approval && role === "staff" && canEdit && (
+            {!report.submitted_for_approval && report.status !== "completed" && canEdit && (
               <Button onClick={submitForApproval} disabled={submitting} className="gap-2">
                 <Send className="h-4 w-4" />
                 {submitting ? "Submitting..." : "Submit for Approval"}
