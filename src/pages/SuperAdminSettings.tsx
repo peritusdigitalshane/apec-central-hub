@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import OpenAISettings from "@/components/OpenAISettings";
@@ -10,7 +10,7 @@ import { ArrowLeft, Shield, Database, Settings, Users } from "lucide-react";
 
 export default function SuperAdminSettings() {
   const navigate = useNavigate();
-  const { isSuperAdmin, loading } = useUserRole();
+  const { isSuperAdmin, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !isSuperAdmin) {

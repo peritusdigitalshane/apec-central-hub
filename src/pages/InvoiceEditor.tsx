@@ -9,7 +9,7 @@ import { Loader2, Save, ArrowLeft, Send, Download, CheckCircle } from "lucide-re
 import SignatureCanvas from "react-signature-canvas";
 import apecLogo from "@/assets/apec-logo.png";
 import html2pdf from "html2pdf.js";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Invoice {
   id: string;
@@ -48,7 +48,7 @@ export default function InvoiceEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { role, isAdmin } = useUserRole();
+  const { role, isAdmin } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     services: Array(12).fill({ description: "", cost: "" })

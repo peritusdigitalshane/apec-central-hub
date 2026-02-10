@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, ClipboardList, BarChart3, Plus, Search } from "lucide-react";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { role, isSuperAdmin, isAdmin } = useUserRole();
+  const { role, isSuperAdmin, isAdmin } = useAuth();
   const [stats, setStats] = useState({
     draftReports: 0,
     pendingReports: 0,

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Settings, Copy, Trash2 } from "lucide-react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Invoice {
   id: string;
@@ -21,7 +21,7 @@ interface Invoice {
 export default function Invoices() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { role } = useUserRole();
+  const { role } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
