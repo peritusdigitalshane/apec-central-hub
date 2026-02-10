@@ -411,7 +411,8 @@ export default function ReportEditor() {
     }
   };
 
-  const canEdit = !report?.submitted_for_approval || isAdmin;
+  const canEditContent = !report?.submitted_for_approval || isAdmin; // Staff + admins can fill in block content
+  const canEditMetadata = isAdmin; // Only admins can change report metadata (title, client, location, etc.)
   const canEditStructure = isAdmin && !report?.template_id; // Only admins can edit structure, and only for non-template reports
   
   if (loading || !report) {
@@ -442,7 +443,7 @@ export default function ReportEditor() {
               <Download className="h-4 w-4" />
               Export PDF
             </Button>
-            {canEdit && (
+            {canEditContent && (
               <>
                 <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
                   <DialogTrigger asChild>
@@ -496,7 +497,7 @@ export default function ReportEditor() {
                 </Button>
               </>
             )}
-            {!report.submitted_for_approval && report.status !== "completed" && canEdit && (
+            {!report.submitted_for_approval && report.status !== "completed" && canEditContent && (
               <Button onClick={submitForApproval} disabled={submitting} className="gap-2">
                 <Send className="h-4 w-4" />
                 {submitting ? "Submitting..." : "Submit for Approval"}
@@ -520,7 +521,7 @@ export default function ReportEditor() {
                 onChange={(e) => setReport({ ...report, title: e.target.value })}
                 className="text-2xl font-bold"
                 placeholder="e.g., Fluorescent Magnetic Particle and Ultrasonic Inspection Report"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -528,7 +529,7 @@ export default function ReportEditor() {
               <Select
                 value={report.report_type_id || ""}
                 onValueChange={(value) => setReport({ ...report, report_type_id: value })}
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select report type for AI generation" />
@@ -557,7 +558,7 @@ export default function ReportEditor() {
                 value={report.job_number || ""}
                 onChange={(e) => setReport({ ...report, job_number: e.target.value })}
                 placeholder="27W005597"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -567,7 +568,7 @@ export default function ReportEditor() {
                 value={report.report_number || ""}
                 onChange={(e) => setReport({ ...report, report_number: e.target.value })}
                 placeholder="A2505-001"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -577,7 +578,7 @@ export default function ReportEditor() {
                 value={report.order_number || ""}
                 onChange={(e) => setReport({ ...report, order_number: e.target.value })}
                 placeholder="TBC"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
           </div>
@@ -590,7 +591,7 @@ export default function ReportEditor() {
                 value={report.client_name || ""}
                 onChange={(e) => setReport({ ...report, client_name: e.target.value })}
                 placeholder="Company Name"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -601,7 +602,7 @@ export default function ReportEditor() {
                 value={report.client_email || ""}
                 onChange={(e) => setReport({ ...report, client_email: e.target.value })}
                 placeholder="contact@company.com"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
           </div>
@@ -614,7 +615,7 @@ export default function ReportEditor() {
                 value={report.location || ""}
                 onChange={(e) => setReport({ ...report, location: e.target.value })}
                 placeholder="Site location"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -624,7 +625,7 @@ export default function ReportEditor() {
                 value={report.subject || ""}
                 onChange={(e) => setReport({ ...report, subject: e.target.value })}
                 placeholder="Inspection subject"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -634,7 +635,7 @@ export default function ReportEditor() {
                 value={report.technician || ""}
                 onChange={(e) => setReport({ ...report, technician: e.target.value })}
                 placeholder="Technician name"
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
           </div>
@@ -647,7 +648,7 @@ export default function ReportEditor() {
                 type="date"
                 value={report.inspection_date || ""}
                 onChange={(e) => setReport({ ...report, inspection_date: e.target.value })}
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               />
             </div>
             <div>
@@ -655,7 +656,7 @@ export default function ReportEditor() {
               <Select
                 value={report.status}
                 onValueChange={(value) => setReport({ ...report, status: value })}
-                disabled={!canEdit}
+                disabled={!canEditMetadata}
               >
                 <SelectTrigger id="status">
                   <SelectValue />
@@ -691,7 +692,7 @@ export default function ReportEditor() {
                     block={block}
                     onUpdate={(content) => updateBlock(block.id, content)}
                     onDelete={canEditStructure ? () => deleteBlock(block.id) : undefined}
-                    canEdit={canEdit}
+                    canEdit={canEditContent}
                   />
                 ))}
               </div>
